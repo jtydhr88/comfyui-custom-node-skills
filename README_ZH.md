@@ -24,7 +24,7 @@
 
 ```bash
 # 克隆到个人 skills 目录
-git clone https://github.com/Comfy-Org/comfyui-custom-node-skills.git
+git clone https://github.com/jtydhr88/comfyui-custom-node-skills.git
 cp -r comfyui-custom-node-skills/skills/comfyui-node-* ~/.claude/skills/
 ```
 

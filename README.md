@@ -24,7 +24,7 @@ A curated collection of [Claude Code skills](https://docs.anthropic.com/en/docs/
 
 ```bash
 # Clone to your personal skills directory
-git clone https://github.com/Comfy-Org/comfyui-custom-node-skills.git
+git clone https://github.com/jtydhr88/comfyui-custom-node-skills.git
 cp -r comfyui-custom-node-skills/skills/comfyui-node-* ~/.claude/skills/
 ```
 
