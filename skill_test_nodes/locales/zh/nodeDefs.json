@@ -1,0 +1,10 @@
+{
+    "SkillTest_BasicNode": {
+        "display_name": "基础节点测试",
+        "description": "最基本的V3节点结构",
+        "inputs": {
+            "image": { "display_name": "图像" },
+            "strength": { "display_name": "强度", "tooltip": "图像亮度乘数" }
+        }
+    }
+}

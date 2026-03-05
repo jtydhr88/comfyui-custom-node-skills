@@ -1,0 +1,12 @@
+[project]
+name = "comfyui-skill-test-nodes"
+version = "1.0.0"
+description = "Test nodes covering all ComfyUI custom node skills"
+license = "MIT"
+requires-python = ">=3.10"
+
+[project.urls]
+Repository = "https://github.com/example/comfyui-skill-test-nodes"
+
+[tool.comfy]
+PublisherId = "skill-test"

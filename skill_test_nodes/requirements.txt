@@ -1,0 +1,2 @@
+# No extra dependencies needed — all covered by ComfyUI built-ins:
+# torch, torchvision, numpy, PIL/Pillow, scipy, safetensors, transformers, accelerate
