@@ -36,6 +36,7 @@ class SimpleNode(io.ComfyNode):
 io.Schema(
     outputs=[
         io.Image.Output("IMAGE"),                    # basic output
+        io.Int.Output("COUNT"),                      # integer output
         io.Float.Output("VALUE", display_name="Result"),  # custom display name
         io.String.Output("TEXT", tooltip="The processed text"),
         io.Image.Output("FRAMES", is_output_list=True),  # outputs a list

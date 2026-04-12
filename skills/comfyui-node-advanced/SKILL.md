@@ -1,6 +1,6 @@
 ---
 name: comfyui-node-advanced
-description: ComfyUI advanced node patterns - MatchType, Autogrow, DynamicCombo, DynamicSlot, node expansion, MultiType, wildcard inputs. Use when building complex nodes with dynamic inputs, type matching, or node expansion.
+description: ComfyUI advanced node patterns - MatchType, Autogrow, DynamicCombo, node expansion, MultiType, wildcard inputs. Use when building complex nodes with dynamic inputs, type matching, or node expansion.
 ---
 
 # ComfyUI Advanced Node Patterns (V3)
@@ -185,23 +185,6 @@ io.DynamicCombo.Input("outer", options=[
     ]),
 ])
 ```
-
-## DynamicSlot - Connection-Triggered Inputs
-
-An input slot that reveals additional inputs when connected:
-
-```python
-io.DynamicSlot.Input(
-    slot=io.Image.Input("trigger_image"),  # the trigger slot
-    inputs=[                               # revealed when connected
-        io.Float.Input("opacity", default=1.0),
-        io.Combo.Input("blend", options=["normal", "multiply"]),
-    ],
-    lazy=True,  # optional: lazy evaluate trigger input
-)
-```
-
-When the user connects to `trigger_image`, the `opacity` and `blend` inputs appear. The trigger slot is always optional (hardcoded).
 
 ## Node Expansion - Subgraph Injection
 

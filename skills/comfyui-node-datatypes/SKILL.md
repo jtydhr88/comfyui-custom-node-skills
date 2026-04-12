@@ -15,7 +15,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 |---|---|---|---|
 | IMAGE | `io.Image` | `torch.Tensor [B,H,W,C]` float32 0-1 | Batch of RGB images |
 | MASK | `io.Mask` | `torch.Tensor [H,W]` or `[B,H,W]` float32 0-1 | Grayscale masks |
-| LATENT | `io.Latent` | `{"samples": Tensor[B,C,H,W], "noise_mask"?: Tensor, "batch_index"?: list[int], "type"?: str}` | Latent space |
+| LATENT | `io.Latent` | `{"samples": Tensor[B,C,H,W] or [B,C,T,H,W], "noise_mask"?: Tensor, "batch_index"?: list[int], "type"?: str}` | Latent space (4D image / 5D video) |
 | CONDITIONING | `io.Conditioning` | `list[tuple[Tensor, PooledDict]]` | Text conditioning with pooled outputs |
 | AUDIO | `io.Audio` | `{"waveform": Tensor[B,C,T], "sample_rate": int}` | Audio data |
 | VIDEO | `io.Video` | `VideoInput` ABC | Video data (abstract base class) |
@@ -88,6 +88,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | CURVE | `io.Curve` | `list[tuple[float, float]]` | Spline curve points |
 | IMAGECOMPARE | `io.ImageCompare` | `dict` | Image comparison widget |
 | WEBCAM | `io.Webcam` | `str` | Webcam capture widget |
+| HISTOGRAM | `io.Histogram` | `list[int]` | Histogram bin counts |
 
 ### Special Types
 
@@ -98,7 +99,6 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | COMFY_MATCHTYPE_V3 | `io.MatchType` | Generic type matching across inputs/outputs |
 | COMFY_AUTOGROW_V3 | `io.Autogrow` | Dynamic growing inputs |
 | COMFY_DYNAMICCOMBO_V3 | `io.DynamicCombo` | Combo that reveals sub-inputs per option |
-| COMFY_DYNAMICSLOT_V3 | `io.DynamicSlot` | Slot that reveals sub-inputs when connected |
 | FLOW_CONTROL | `io.FlowControl` | Internal testing only |
 | ACCUMULATION | `io.Accumulation` | Internal testing only |
 
@@ -183,16 +183,24 @@ Dict with typed keys:
 
 ```python
 class LatentDict(TypedDict):
-    samples: torch.Tensor       # [B, C, H, W] - required
+    samples: torch.Tensor       # [B, C, H, W] (image) or [B, C, T, H, W] (video) - required
     noise_mask: NotRequired[torch.Tensor]
     batch_index: NotRequired[list[int]]
     type: NotRequired[str]      # only for "audio", "hunyuan3dv2"
 ```
 
-Latent dimensions are 1/8 of pixel dims. SD1.5/SDXL = 4 channels, SD3/Flux = 16 channels.
+**Image models** (SD1.5, SDXL, SD3, Flux): 4D `[B, C, H, W]` — SD1.5/SDXL = 4 channels, SD3/Flux = 16 channels. Latent dimensions are 1/8 of pixel dims.
+
+**Video models** (Hunyuan Video, Wan, Cosmos, LTX Video, Mochi): 5D `[B, C, T, H, W]` — T is the temporal (frame) dimension.
 
 ```python
-samples = latent["samples"]       # [B, C, H, W]
+samples = latent["samples"]
+# Check dimensionality:
+if samples.ndim == 5:
+    B, C, T, H, W = samples.shape   # video latent
+else:
+    B, C, H, W = samples.shape      # image latent
+
 # Always preserve extra keys when modifying:
 result = latent.copy()
 result["samples"] = modified_samples

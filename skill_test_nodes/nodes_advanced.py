@@ -5,7 +5,6 @@ Covers: comfyui-node-advanced
 - Autogrow TemplatePrefix
 - Autogrow TemplateNames
 - DynamicCombo (Options, nested)
-- DynamicSlot
 - Node expansion (GraphBuilder, enable_expand)
 - accept_all_inputs
 - Execution blocking (block_execution)
@@ -197,34 +196,6 @@ class SkillTest_DynamicComboNested(io.ComfyNode):
     def execute(cls, outer: io.DynamicCombo.Type, **kwargs):
         return io.NodeOutput(str(outer))
 
-
-# --- advanced: DynamicSlot ---
-class SkillTest_DynamicSlot(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(
-            node_id="SkillTest_DynamicSlot",
-            display_name="[Test] DynamicSlot",
-            category="skill_tests/advanced",
-            inputs=[
-                io.DynamicSlot.Input(
-                    slot=io.Image.Input("trigger_image"),
-                    inputs=[
-                        io.Float.Input("opacity", default=1.0),
-                        io.Combo.Input("blend", options=["normal", "multiply"]),
-                    ],
-                    lazy=True,
-                ),
-                io.Image.Input("base_image"),
-            ],
-            outputs=[io.Image.Output("IMAGE")],
-        )
-
-    @classmethod
-    def execute(cls, base_image, trigger_image=None, opacity=1.0, blend="normal"):
-        if trigger_image is not None:
-            return io.NodeOutput(base_image * (1 - opacity) + trigger_image * opacity)
-        return io.NodeOutput(base_image)
 
 
 # --- advanced: Node expansion (GraphBuilder) ---

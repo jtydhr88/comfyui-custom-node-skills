@@ -12,7 +12,7 @@ A curated collection of [Claude Code skills](https://docs.anthropic.com/en/docs/
 | **comfyui-node-inputs** | Configuring widgets, adding inputs | INT, FLOAT, STRING, BOOLEAN, COMBO, hidden/optional/lazy inputs, `force_input` |
 | **comfyui-node-outputs** | Returning results, previews, saving files | `NodeOutput`, `PreviewImage/Mask/Audio/Text`, `SavedImages`, UI helpers |
 | **comfyui-node-datatypes** | Working with tensors, model types | IMAGE, LATENT, MASK, CONDITIONING, MODEL, CLIP, VAE, AUDIO, VIDEO, 3D, custom types |
-| **comfyui-node-advanced** | Dynamic inputs, type matching, expansion | MatchType, Autogrow, DynamicCombo, DynamicSlot, `GraphBuilder`, MultiType, async |
+| **comfyui-node-advanced** | Dynamic inputs, type matching, expansion | MatchType, Autogrow, DynamicCombo, `GraphBuilder`, MultiType, async |
 | **comfyui-node-lifecycle** | Execution debugging, caching, validation | `fingerprint_inputs`, `validate_inputs`, `check_lazy_status`, execution order |
 | **comfyui-node-frontend** | UI features, custom widgets, extensions | JS hooks, sidebar tabs, commands, settings, toasts, dialogs, context menus |
 | **comfyui-node-migration** | Converting V1 nodes to V3 | Property mapping, method conversion, registration changes |
@@ -71,7 +71,9 @@ Skills are loaded automatically when Claude detects relevant context. You can al
 
 Built from and verified against:
 - [ComfyUI backend](https://github.com/comfyanonymous/ComfyUI) — V3 API at `comfy_api/latest/`, V1 at `comfy/comfy_types/`
+  - Last verified: `a2840e75` — Make ImageUpscaleWithModel node work with intermediate device and dtype. (#13357)
 - [ComfyUI frontend](https://github.com/Comfy-Org/ComfyUI_frontend) — Extension system, widget types, settings
+  - Last verified: `6f579c59` — fix: enable playwright/no-force-option lint rule (#11164)
 - [ComfyUI docs](https://docs.comfy.org/custom-nodes/overview) — Official guides and references
 - Built-in node implementations in `comfy_extras/`
 

@@ -59,6 +59,7 @@ class SkillTest_SchemaFields(io.ComfyNode):
             not_idempotent=False,
             accept_all_inputs=False,
             enable_expand=False,
+            has_intermediate_output=False,
             search_aliases=["test_schema", "demo_fields"],
             # essentials_category="Basic",  # omit: internal use
             # price_badge=None,             # omit: API node use

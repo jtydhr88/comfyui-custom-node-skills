@@ -9,6 +9,7 @@ Covers: comfyui-node-datatypes
 - MultiType (with and without widget override)
 - Type conversion patterns (IMAGE <-> MASK, resize)
 - Tensor safety (is not None)
+- Histogram type
 """
 
 import torch
@@ -268,6 +269,29 @@ class SkillTest_TypeConvert(io.ComfyNode):
 
 
 # --- datatypes: Tensor safety ---
+# --- datatypes: Histogram type ---
+class SkillTest_Histogram(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SkillTest_Histogram",
+            display_name="[Test] Histogram",
+            category="skill_tests/datatypes",
+            inputs=[
+                io.Image.Input("image"),
+                io.Int.Input("bins", default=256, min=2, max=256),
+            ],
+            outputs=[io.Histogram.Output("HISTOGRAM")],
+        )
+
+    @classmethod
+    def execute(cls, image, bins=256):
+        # Convert image to grayscale and compute histogram
+        gray = image[0, :, :, :3].mean(dim=-1)
+        hist = torch.histc(gray, bins=bins, min=0.0, max=1.0)
+        return io.NodeOutput(hist.int().tolist())
+
+
 class SkillTest_TensorSafety(io.ComfyNode):
     @classmethod
     def define_schema(cls):

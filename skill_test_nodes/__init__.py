@@ -67,6 +67,7 @@ from .nodes_datatypes import (
     SkillTest_MultiTypeWidget,
     SkillTest_TypeConvert,
     SkillTest_TensorSafety,
+    SkillTest_Histogram,
 )
 from .nodes_advanced import (
     SkillTest_MatchType,
@@ -75,7 +76,6 @@ from .nodes_advanced import (
     SkillTest_AutogrowNames,
     SkillTest_DynamicCombo,
     SkillTest_DynamicComboNested,
-    SkillTest_DynamicSlot,
     SkillTest_NodeExpansion,
     SkillTest_AcceptAll,
     SkillTest_GateNode,
@@ -152,6 +152,7 @@ class SkillTestExtension(ComfyExtension):
             SkillTest_MultiTypeWidget,
             SkillTest_TypeConvert,
             SkillTest_TensorSafety,
+            SkillTest_Histogram,
             # advanced
             SkillTest_MatchType,
             SkillTest_SwitchNode,
@@ -159,7 +160,6 @@ class SkillTestExtension(ComfyExtension):
             SkillTest_AutogrowNames,
             SkillTest_DynamicCombo,
             SkillTest_DynamicComboNested,
-            SkillTest_DynamicSlot,
             SkillTest_NodeExpansion,
             SkillTest_AcceptAll,
             SkillTest_GateNode,

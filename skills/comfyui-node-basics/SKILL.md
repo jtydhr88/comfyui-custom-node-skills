@@ -92,6 +92,7 @@ io.Schema(
     search_aliases=["alias1", "alias2"],# alternative search terms
     essentials_category="Basic",        # optional: Essentials tab category
     price_badge=None,                   # optional: PriceBadge for API nodes
+    has_intermediate_output=False,      # True for nodes with interactive UI that produce intermediate outputs
 )
 ```
 

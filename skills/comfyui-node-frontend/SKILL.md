@@ -433,6 +433,35 @@ const value = await app.extensionManager.dialog.prompt({
 });
 ```
 
+## ExtensionManager Utilities
+
+### Setting Access
+
+```javascript
+// Read a setting value
+const val = app.extensionManager.setting.get("my.ext.mySetting");
+
+// Write a setting value
+app.extensionManager.setting.set("my.ext.mySetting", newValue);
+```
+
+### Execution Errors (read-only)
+
+```javascript
+// Last node-level errors (keyed by node ID)
+const nodeErrors = app.extensionManager.lastNodeErrors;
+
+// Last execution-level error
+const execError = app.extensionManager.lastExecutionError;
+```
+
+### Markdown Rendering
+
+```javascript
+// Render markdown to sanitized HTML (marked + DOMPurify, safe for innerHTML)
+const html = app.extensionManager.renderMarkdownToHtml(markdownStr, baseUrl);
+```
+
 ## Context Menu Items
 
 ```javascript

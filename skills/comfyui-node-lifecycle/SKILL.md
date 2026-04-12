@@ -92,6 +92,18 @@ io.Schema(
 )
 ```
 
+### has_intermediate_output Flag
+
+For nodes with interactive UI that produce intermediate outputs (e.g., Image Crop, Painter). These behave like output nodes (UI results are cached and resent to the frontend on page refresh) but do NOT automatically get added to the execution list — they only execute if on the dependency path of a real output node.
+
+```python
+io.Schema(
+    node_id="InteractiveCropNode",
+    has_intermediate_output=True,
+    # ...
+)
+```
+
 ## Input Validation: validate_inputs (V3) / VALIDATE_INPUTS (V1)
 
 Validates inputs before execution. Runs during the validation phase.
