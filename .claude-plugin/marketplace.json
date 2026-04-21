@@ -1,7 +1,7 @@
 {
   "name": "comfyui-custom-node-skills",
   "owner": {
-    "name": "Edward Niewold"
+    "name": "Terry Jia"    
   },
   "metadata": {
     "description": "Skills for building ComfyUI custom nodes with the V3 and V1 Python APIs"
