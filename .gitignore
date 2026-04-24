@@ -34,3 +34,6 @@ __pycache__
 node.zip
 
 /js
+/.vs
+/.claude
+/CLAUDE.md

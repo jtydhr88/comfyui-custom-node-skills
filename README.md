@@ -20,19 +20,23 @@ A curated collection of [Claude Code skills](https://docs.anthropic.com/en/docs/
 
 ## Installation
 
+### Plugin Marketplace (recommended)
+
+In Claude Code, open the marketplace and add this repository URL. This installs the `comfyui-custom-nodes` plugin, which exposes all 9 skills automatically — no manual copying required.
+
 ### Personal (all projects)
 
 ```bash
-# Clone to your personal skills directory
+# Clone the repository, then copy the skills to your personal skills directory
 git clone https://github.com/jtydhr88/comfyui-custom-node-skills.git
-cp -r comfyui-custom-node-skills/skills/comfyui-node-* ~/.claude/skills/
+cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* ~/.claude/skills/
 ```
 
 ### Project-specific
 
 ```bash
 # Copy skills into your ComfyUI custom node project
-cp -r comfyui-custom-node-skills/skills/comfyui-node-* /path/to/your-project/.claude/skills/
+cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* /path/to/your-project/.claude/skills/
 ```
 
 ### Verify

@@ -1,0 +1,16 @@
+{
+  "name": "comfyui-custom-node-skills",
+  "owner": {
+    "name": "Terry Jia"    
+  },
+  "metadata": {
+    "description": "Skills for building ComfyUI custom nodes with the V3 and V1 Python APIs"
+  },
+  "plugins": [
+    {
+      "name": "comfyui-custom-nodes",
+      "source": "./plugins/comfyui-custom-nodes",
+      "description": "9 skills covering ComfyUI custom node development with the V3 and V1 APIs"
+    }
+  ]
+}

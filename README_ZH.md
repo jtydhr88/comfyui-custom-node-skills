@@ -20,19 +20,23 @@
 
 ## 安装
 
+### 插件市场（推荐）
+
+在 Claude Code 中打开市场，添加本仓库 URL，即可安装 `comfyui-custom-nodes` 插件，全部 9 个 Skills 将自动可用，无需手动复制。
+
 ### 个人级别（所有项目生效）
 
 ```bash
-# 克隆到个人 skills 目录
+# 克隆仓库，然后将 Skills 复制到个人 skills 目录
 git clone https://github.com/jtydhr88/comfyui-custom-node-skills.git
-cp -r comfyui-custom-node-skills/skills/comfyui-node-* ~/.claude/skills/
+cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* ~/.claude/skills/
 ```
 
 ### 项目级别
 
 ```bash
 # 复制到你的 ComfyUI 自定义节点项目中
-cp -r comfyui-custom-node-skills/skills/comfyui-node-* /path/to/your-project/.claude/skills/
+cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* /path/to/your-project/.claude/skills/
 ```
 
 ### 验证
