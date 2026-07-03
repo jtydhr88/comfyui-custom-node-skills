@@ -87,10 +87,12 @@ For nodes that should never be cached:
 ```python
 io.Schema(
     node_id="AlwaysRunNode",
-    not_idempotent=True,  # prevents all caching
+    not_idempotent=True,  # prevents cache sharing between instances of the same node
     # ...
 )
 ```
+
+> **Important:** `not_idempotent=True` does **not** prevent a node from reusing its own cached output on subsequent runs. It only prevents cache sharing between different instances of the same node type that have identical inputs. To force re-execution every run (e.g., for file-writing nodes), you must also implement `fingerprint_inputs` (V3) or `IS_CHANGED` (V1) returning a unique value each time.
 
 ### has_intermediate_output Flag
 
