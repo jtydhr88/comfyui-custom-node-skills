@@ -1,0 +1,20 @@
+{
+  "name": "comfyui-custom-node-skills",
+  "interface": {
+    "displayName": "ComfyUI Custom Node Skills"
+  },
+  "plugins": [
+    {
+      "name": "comfyui-custom-nodes",
+      "source": {
+        "source": "local",
+        "path": "./plugins/comfyui-custom-nodes"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

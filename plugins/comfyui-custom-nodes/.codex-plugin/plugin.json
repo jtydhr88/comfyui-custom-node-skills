@@ -1,0 +1,12 @@
+{
+  "name": "comfyui-custom-nodes",
+  "description": "9 skills covering ComfyUI custom node development with the V3 and V1 APIs",
+  "version": "1.0.0",
+  "author": {
+    "name": "Terry Jia"
+  },
+  "homepage": "https://github.com/jtydhr88/comfyui-custom-node-skills",
+  "license": "MIT",
+  "keywords": [ "comfyui", "custom-nodes", "ai", "image-generation" ],
+  "skills": "./skills"
+}

@@ -1,6 +1,8 @@
-# ComfyUI 自定义节点 Skills（Claude Code 专用）
+# ComfyUI 自定义节点 Skills
 
-一套为 [Claude Code Skills](https://docs.anthropic.com/en/docs/claude-code/skills) 打造的 ComfyUI 自定义节点开发知识库，涵盖 V3（推荐）和 V1（旧版）两套 API。
+一套面向 [Claude Code Skills](https://docs.anthropic.com/en/docs/claude-code/skills) 与 [OpenAI Codex](https://developers.openai.com/codex/build-skills) 的 ComfyUI 自定义节点开发知识库，涵盖 V3（推荐）和 V1（旧版）两套 API。
+
+所有 `SKILL.md` 文件遵循开放的 [agentskills.io](https://agentskills.io) 标准，Claude Code 与 Codex 通用——装一次，两个 Agent 都能用。
 
 > **[English](README.md)**
 
@@ -20,11 +22,13 @@
 
 ## 安装
 
-### 插件市场（推荐）
+### Claude Code
+
+#### 插件市场（推荐）
 
 在 Claude Code 中打开市场，添加本仓库 URL，即可安装 `comfyui-custom-nodes` 插件，全部 9 个 Skills 将自动可用，无需手动复制。
 
-### 个人级别（所有项目生效）
+#### 个人级别（所有项目生效）
 
 ```bash
 # 克隆仓库，然后将 Skills 复制到个人 skills 目录
@@ -32,14 +36,14 @@ git clone https://github.com/jtydhr88/comfyui-custom-node-skills.git
 cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* ~/.claude/skills/
 ```
 
-### 项目级别
+#### 项目级别
 
 ```bash
 # 复制到你的 ComfyUI 自定义节点项目中
 cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* /path/to/your-project/.claude/skills/
 ```
 
-### 验证
+#### 验证
 
 Skills 会在 Claude 检测到相关上下文时自动加载，也可以手动检查：
 
@@ -47,20 +51,54 @@ Skills 会在 Claude 检测到相关上下文时自动加载，也可以手动�
 > /skills
 ```
 
+### Codex（CLI / ChatGPT 桌面应用 / IDE 扩展）
+
+#### 插件市场（推荐）
+
+```bash
+# 将本仓库添加为 Codex marketplace 来源
+codex plugin marketplace add tapstoop/comfyui-custom-node-skills-codex
+
+# 然后在 ChatGPT 桌面应用或 Codex CLI 中：
+# Plugins → 选择 "ComfyUI Custom Node Skills" → 安装
+```
+
+插件直接复用同一份 `SKILL.md` 文件，无需任何改写或重复。
+
+#### 个人级别（所有项目生效）
+
+```bash
+# 克隆仓库，然后将 Skills 复制到个人 skills 目录
+git clone https://github.com/jtydhr88/comfyui-custom-node-skills.git
+cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* ~/.agents/skills/
+```
+
+#### 项目级别
+
+```bash
+# 复制到你的 ComfyUI 自定义节点项目中
+mkdir -p .agents/skills
+cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-node-* .agents/skills/
+```
+
+#### 验证
+
+在 Codex 中执行 `/skills` 列出可用 Skills，或使用 `$comfyui-node-basics` 显式调用。
+
 ## 使用示例
 
 ```
 # "创建一个带图像输入和浮点滑块的 V3 节点"
-# → Claude 使用 comfyui-node-basics + comfyui-node-inputs
+# → Agent 使用 comfyui-node-basics + comfyui-node-inputs
 
 # "给我的节点加上图片预览输出"
-# → Claude 使用 comfyui-node-outputs
+# → Agent 使用 comfyui-node-outputs
 
 # "把我的 V1 节点迁移到 V3"
-# → Claude 使用 comfyui-node-migration
+# → Agent 使用 comfyui-node-migration
 
 # "添加一个带自定义设置的侧边栏"
-# → Claude 使用 comfyui-node-frontend
+# → Agent 使用 comfyui-node-frontend
 ```
 
 ## 特点
@@ -70,10 +108,12 @@ Skills 会在 Claude 检测到相关上下文时自动加载，也可以手动�
 - **源码验证** — 与 ComfyUI 前后端源码交叉比对，确保准确
 - **覆盖全面** — 从基础节点创建到 DynamicCombo、节点展开等高级模式
 - **前端扩展** — 完整的 JavaScript 扩展系统，包含 15+ 生命周期钩子
+- **多 Agent 通用** — 同一份 `SKILL.md` 兼容 Claude Code 与 Codex（开放 agentskills.io 标准）
 
 ## 数据来源
 
 基于以下源码构建并验证：
+
 - [ComfyUI 后端](https://github.com/comfyanonymous/ComfyUI) — V3 API 位于 `comfy_api/latest/`，V1 位于 `comfy/comfy_types/`
   - 最后验证: `a2840e75` — Make ImageUpscaleWithModel node work with intermediate device and dtype. (#13357)
 - [ComfyUI 前端](https://github.com/Comfy-Org/ComfyUI_frontend) — 扩展系统、控件类型、设置
