@@ -57,7 +57,7 @@ Skills 会在 Claude 检测到相关上下文时自动加载，也可以手动�
 
 ```bash
 # 将本仓库添加为 Codex marketplace 来源
-codex plugin marketplace add tapstoop/comfyui-custom-node-skills-codex
+codex plugin marketplace add jtydhr88/comfyui-custom-node-skills
 
 # 然后在 ChatGPT 桌面应用或 Codex CLI 中：
 # Plugins → 选择 "ComfyUI Custom Node Skills" → 安装

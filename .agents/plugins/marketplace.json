@@ -6,6 +6,7 @@
   "plugins": [
     {
       "name": "comfyui-custom-nodes",
+      "description": "9 skills covering ComfyUI custom node development with the V3 and V1 APIs",
       "source": {
         "source": "local",
         "path": "./plugins/comfyui-custom-nodes"

@@ -57,7 +57,7 @@ Skills are loaded automatically when Claude detects relevant context. You can al
 
 ```bash
 # Add this repository as a Codex marketplace source
-codex plugin marketplace add tapstoop/comfyui-custom-node-skills-codex
+codex plugin marketplace add jtydhr88/comfyui-custom-node-skills
 
 # Then, in the ChatGPT desktop app or Codex CLI:
 # Plugins → select "ComfyUI Custom Node Skills" → Install

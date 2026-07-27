@@ -8,5 +8,8 @@
   "homepage": "https://github.com/jtydhr88/comfyui-custom-node-skills",
   "license": "MIT",
   "keywords": [ "comfyui", "custom-nodes", "ai", "image-generation" ],
+  "interface": {
+    "displayName": "ComfyUI Custom Node Skills"
+  },
   "skills": "./skills"
 }
