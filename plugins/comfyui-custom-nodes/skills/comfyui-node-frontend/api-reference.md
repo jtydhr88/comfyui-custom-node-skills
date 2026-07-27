@@ -45,6 +45,8 @@ import { api, ComfyApi } from "../../scripts/api.js";
 **Prompt execution:**
 - `queuePrompt(number, data, options?)` — queue a prompt
 - `interrupt(runningJobId)` — interrupt execution
+- `cancelJob(jobId)` — cancel one job via `POST /api/jobs/{job_id}/cancel` (idempotent)
+- `cancelJobs(jobIds)` — batch cancel via `POST /api/jobs/cancel` (best-effort)
 
 **Queue / History:**
 - `getQueue()` / `getHistory()` / `getJobDetail(jobId)`
@@ -199,7 +201,7 @@ import { ComfyWidgets, addValueControlWidgets } from "../../scripts/widgets.js";
 
 Built-in widget constructors keyed by type string:
 
-`INT`, `FLOAT`, `BOOLEAN`, `STRING`, `MARKDOWN`, `COMBO`, `IMAGEUPLOAD`, `COLOR`, `IMAGECOMPARE`, `BOUNDING_BOX`, `CHART`, `GALLERIA`, `PAINTER`, `TEXTAREA`, `CURVE`
+`INT`, `FLOAT`, `BOOLEAN`, `STRING`, `MARKDOWN`, `COMBO`, `IMAGEUPLOAD`, `COLOR`, `IMAGECOMPARE`, `BOUNDING_BOX`, `CHART`, `GALLERIA`, `PAINTER`, `TEXTAREA`, `CURVE`, `RANGE`, `BOUNDING_BOXES`, `COLORS` (plus dynamically registered widgets)
 
 **Widget constructor signature:**
 ```typescript
@@ -310,7 +312,7 @@ import { getPngMetadata, getWebpMetadata, importA1111 } from "../../scripts/pngi
 import { $el, ComfyDialog } from "../../scripts/ui.js";
 ```
 
-> **Deprecated**: Will be removed in v1.34. Use Vue alternatives.
+> **Deprecated**: Removal planned (still present as of v1.48). Use Vue alternatives.
 
 | Export | Description |
 |---|---|

@@ -283,6 +283,28 @@ class SkillTest_ColorInput(io.ComfyNode):
         return io.NodeOutput(f"color={color}")
 
 
+# --- inputs: COLORS (palette) ---
+class SkillTest_ColorsInput(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SkillTest_ColorsInput",
+            display_name="[Test] COLORS Input",
+            category="skill_tests/inputs",
+            inputs=[
+                io.Colors.Input("palette",
+                    default=["#ff0000", "#00ff00", "#0000ff"],
+                    socketless=True,
+                ),
+            ],
+            outputs=[io.String.Output("TEXT")],
+        )
+
+    @classmethod
+    def execute(cls, palette):
+        return io.NodeOutput(f"palette={palette}")
+
+
 # --- inputs: BOUNDING_BOX ---
 class SkillTest_BoundingBoxInput(io.ComfyNode):
     @classmethod
@@ -305,6 +327,28 @@ class SkillTest_BoundingBoxInput(io.ComfyNode):
         return io.NodeOutput(f"region={region}")
 
 
+# --- inputs: BOUNDING_BOXES (multiple regions with metadata) ---
+class SkillTest_BoundingBoxesInput(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SkillTest_BoundingBoxesInput",
+            display_name="[Test] BOUNDING_BOXES Input",
+            category="skill_tests/inputs",
+            inputs=[
+                io.BoundingBoxes.Input("regions",
+                    default=[],
+                    socketless=True,
+                ),
+            ],
+            outputs=[io.String.Output("TEXT")],
+        )
+
+    @classmethod
+    def execute(cls, regions):
+        return io.NodeOutput(f"regions={regions}")
+
+
 # --- inputs: CURVE ---
 class SkillTest_CurveInput(io.ComfyNode):
     @classmethod
@@ -325,6 +369,31 @@ class SkillTest_CurveInput(io.ComfyNode):
     @classmethod
     def execute(cls, curve):
         return io.NodeOutput(f"curve={curve}")
+
+
+# --- inputs: RANGE (levels editor) ---
+class SkillTest_RangeInput(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SkillTest_RangeInput",
+            display_name="[Test] RANGE Input",
+            category="skill_tests/inputs",
+            inputs=[
+                io.Range.Input("levels",
+                    default={"min": 0.0, "max": 1.0},
+                    value_min=0.0,
+                    value_max=1.0,
+                ),
+            ],
+            outputs=[io.String.Output("TEXT")],
+        )
+
+    @classmethod
+    def execute(cls, levels):
+        from comfy_api.input import RangeInput
+        r = RangeInput.from_raw(levels)
+        return io.NodeOutput(f"min={r.min_val} max={r.max_val} midpoint={r.midpoint}")
 
 
 # --- inputs: WEBCAM ---

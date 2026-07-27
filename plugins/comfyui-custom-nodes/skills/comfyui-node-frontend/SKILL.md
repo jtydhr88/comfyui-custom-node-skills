@@ -164,6 +164,14 @@ getSelectionToolboxCommands(selectedItem) {
 },
 ```
 
+### onNodeOutputsUpdated — Execution outputs changed
+
+```javascript
+onNodeOutputsUpdated(nodeOutputs) {
+    // nodeOutputs: Record<NodeLocatorId, output data>, fired when node outputs update
+},
+```
+
 ### Authentication Hooks
 
 ```javascript
@@ -209,13 +217,14 @@ beforeRegisterNodeDef(nodeType, nodeData, app) {
 
 ```javascript
 // Called before prompt is queued
-widget.beforeQueued = function () {
+// isPartialExecution is true when only selected nodes are queued
+widget.beforeQueued = function ({ isPartialExecution } = {}) {
     // Prepare widget value
 };
 
 // Called after prompt is queued
-widget.afterQueued = function () {
-    // Reset or update widget
+widget.afterQueued = function ({ isPartialExecution } = {}) {
+    // Reset or update widget (e.g. control_after_generate)
 };
 
 // Custom serialization
@@ -504,6 +513,16 @@ node.onExecutionStart = function() { /* about to execute */ };
 node.onDragOver = function(event) { /* file drag over */ };
 node.onDragDrop = function(event) { /* file dropped */ };
 ```
+
+## Recent Breaking Changes (frontend ≥ 1.4x, mid-2026)
+
+Changes extension authors should be aware of:
+
+- **Group nodes removed** — group nodes can no longer be created; workflows containing them auto-convert to **subgraphs** on load. `GroupNodeHandler` / `GroupNodeConfig` remain re-exported for backward compatibility only. Use subgraphs for new work.
+- **`LiteGraph.use_uuids` removed** — node IDs are always numeric. Don't read or set this flag (UUIDs are still used internally for subgraph/slot IDs).
+- **`LGraph.onGetNodeMenuOptions` removed**; **`LGraph.onBeforeChange` deprecated** — assigning it still works but warns; use `LGraphCanvas.onBeforeChange` instead.
+- **`IBaseWidget.entityId` removed** — widget identity is the `widgetId` branded key (`graphId:nodeId:name`); promoted subgraph widgets are store-backed.
+- **`node.size` is Proxy-backed** — both `node.size[1] = h` and `node.size = [w, h]` now correctly reflow Vue-rendered nodes; no polling workarounds needed.
 
 ## Frontend Scripts API
 

@@ -141,6 +141,16 @@ io.Color.Input("color",
 # Value type: str (hex color)
 ```
 
+### COLORS (Color Palette)
+
+```python
+io.Colors.Input("palette",
+    default=["#ff0000", "#00ff00"],
+    socketless=True,
+)
+# Value type: list[str] (hex colors)
+```
+
 ### BOUNDING_BOX (Rectangle Selector)
 
 ```python
@@ -153,6 +163,16 @@ io.BoundingBox.Input("region",
 # Value type: {"x": int, "y": int, "width": int, "height": int}
 ```
 
+### BOUNDING_BOXES (Multiple Regions)
+
+```python
+io.BoundingBoxes.Input("regions",
+    default=[],
+    socketless=True,
+)
+# Value type: list of {"x": int, "y": int, "width": int, "height": int, "metadata": dict}
+```
+
 ### CURVE (Spline Editor)
 
 ```python
@@ -160,7 +180,22 @@ io.Curve.Input("curve",
     default=[(0.0, 0.0), (1.0, 1.0)],  # linear ramp
     socketless=True,
 )
-# Value type: list[tuple[float, float]]
+# Value type: raw curve data; normalize with CurveInput.from_raw(value)
+# (from comfy_api.input import CurveInput)
+```
+
+### RANGE (Levels/Range Editor)
+
+```python
+io.Range.Input("levels",
+    default={"min": 0.0, "max": 1.0},
+    gradient_stops=None,     # gradient background for the slider
+    show_midpoint=True,      # gamma midpoint handle
+    value_min=0.0,
+    value_max=1.0,
+)
+# Value type: raw dict; normalize with RangeInput.from_raw(value)
+# (from comfy_api.input import RangeInput) -> .min_val, .max_val, .midpoint, .to_lut()
 ```
 
 ### WEBCAM (Camera Capture)
@@ -258,6 +293,7 @@ class MyNode(io.ComfyNode):
                 io.Hidden.dynprompt,        # dynamic prompt object
                 io.Hidden.auth_token_comfy_org,  # auth token
                 io.Hidden.api_key_comfy_org,     # API key
+                io.Hidden.comfy_usage_source,    # prompt source, e.g. "comfyui-frontend"
             ],
         )
 

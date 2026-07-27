@@ -27,6 +27,8 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | WAN_CAMERA_EMBEDDING | `io.WanCameraEmbedding` | `torch.Tensor` | WAN camera embeddings |
 | LATENT_OPERATION | `io.LatentOperation` | `Callable[[Tensor], Tensor]` | Latent transform function |
 | TIMESTEPS_RANGE | `io.TimestepsRange` | `tuple[int, int]` | Range 0.0-1.0 |
+| DICT | `io.Dict` | `dict` | Generic dictionary |
+| ARRAY | `io.Array` | `list` | Generic list/array |
 
 ### Model Types (opaque, typically pass-through)
 
@@ -41,6 +43,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | STYLE_MODEL | `io.StyleModel` | `StyleModel` |
 | GLIGEN | `io.Gligen` | `ModelPatcher` (wrapping Gligen) |
 | UPSCALE_MODEL | `io.UpscaleModel` | `ImageModelDescriptor` |
+| BACKGROUND_REMOVAL | `io.BackgroundRemoval` | `BackgroundRemovalModel` (e.g. BiRefNet) |
 | LATENT_UPSCALE_MODEL | `io.LatentUpscaleModel` | Any |
 | SAMPLER | `io.Sampler` | `Sampler` |
 | GUIDER | `io.Guider` | `CFGGuider` |
@@ -61,6 +64,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 |---|---|---|---|
 | MESH | `io.Mesh` | `MESH(vertices, faces)` | 3D mesh with vertices + faces tensors |
 | VOXEL | `io.Voxel` | `VOXEL(data)` | Voxel data tensor |
+| SPLAT | `io.Splat` | `SPLAT` | Gaussian splat data |
 | FILE_3D | `io.File3DAny` | `File3D` | Any supported 3D format |
 | FILE_3D_GLB | `io.File3DGLB` | `File3D` | Binary glTF |
 | FILE_3D_GLTF | `io.File3DGLTF` | `File3D` | JSON-based glTF |
@@ -68,10 +72,23 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | FILE_3D_OBJ | `io.File3DOBJ` | `File3D` | OBJ format |
 | FILE_3D_STL | `io.File3DSTL` | `File3D` | STL format (3D printing) |
 | FILE_3D_USDZ | `io.File3DUSDZ` | `File3D` | Apple AR format |
+| FILE_3D_PLY | `io.File3DPLY` | `File3D` | PLY (point cloud / splat) |
+| FILE_3D_SPLAT | `io.File3DSPLAT` | `File3D` | .splat gaussian splat file |
+| FILE_3D_SPZ | `io.File3DSPZ` | `File3D` | Compressed splat (.spz) |
+| FILE_3D_KSPLAT | `io.File3DKSPLAT` | `File3D` | .ksplat format |
+| FILE_3D_SPLAT_ANY | `io.File3DSplatAny` | `File3D` | Any splat format |
+| FILE_3D_POINT_CLOUD_ANY | `io.File3DPointCloudAny` | `File3D` | Any point cloud format |
 | SVG | `io.SVG` | `SVG` | Scalable vector graphics |
-| LOAD_3D | `io.Load3D` | `{"image": str, "mask": str, "normal": str, "camera_info": CameraInfo}` | 3D model with renders |
+| LOAD_3D | `io.Load3D` | `Model3DDict` (see below) | 3D model with renders |
 | LOAD_3D_ANIMATION | `io.Load3DAnimation` | Same as Load3D | Animated 3D model |
-| LOAD3D_CAMERA | `io.Load3DCamera` | `{"position": dict, "target": dict, "zoom": int, "cameraType": str}` | 3D camera info |
+| LOAD3D_CAMERA | `io.Load3DCamera` | `CameraInfo` (see below) | 3D camera info |
+| LOAD3D_MODEL_INFO | `io.Load3DModelInfo` | `list[Model3DTransform]` | Per-model transforms (position/quaternion/scale) |
+
+**Load3D.Model3DDict**: `{"image": str, "mask": str, "normal": str, "camera_info": CameraInfo, "recording"?: str, "model_3d_info"?: list[Model3DTransform]}`
+
+**Load3DCamera.CameraInfo** (right-handed, Y-up, camera looks down -Z): required keys `position`, `target`, `zoom`, `cameraType` (`'perspective' | 'orthographic'`); optional keys `quaternion` (camera world rotation), `fov` (vertical, degrees, perspective only), `aspect`, `near`, `far`, `frustum` (orthographic only: `{left, right, top, bottom}`).
+
+**Load3DModelInfo.Model3DTransform**: `{"position": dict, "quaternion": dict, "scale": dict}` in world space.
 
 ### Widget Types (create UI controls)
 
@@ -84,8 +101,11 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | COMBO | `io.Combo` | `str` | Dropdown selection |
 | COMBO (multi) | `io.MultiCombo` | `list[str]` | Multi-select dropdown |
 | COLOR | `io.Color` | `str` (hex) | Color picker, default `#ffffff` |
+| COLORS | `io.Colors` | `list[str]` (hex) | Color palette (list of colors) |
 | BOUNDING_BOX | `io.BoundingBox` | `{"x": int, "y": int, "width": int, "height": int}` | Rectangle region |
+| BOUNDING_BOXES | `io.BoundingBoxes` | `list[{"x", "y", "width", "height", "metadata": dict}]` | Multiple labeled regions |
 | CURVE | `io.Curve` | `list[tuple[float, float]]` | Spline curve points |
+| RANGE | `io.Range` | `RangeInput` (min/max + optional midpoint) | Levels/range editor with gradient display |
 | IMAGECOMPARE | `io.ImageCompare` | `dict` | Image comparison widget |
 | WEBCAM | `io.Webcam` | `str` | Webcam capture widget |
 | HISTOGRAM | `io.Histogram` | `list[int]` | Histogram bin counts |
@@ -99,6 +119,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | COMFY_MATCHTYPE_V3 | `io.MatchType` | Generic type matching across inputs/outputs |
 | COMFY_AUTOGROW_V3 | `io.Autogrow` | Dynamic growing inputs |
 | COMFY_DYNAMICCOMBO_V3 | `io.DynamicCombo` | Combo that reveals sub-inputs per option |
+| COMFY_DYNAMICSLOT_V3 | `io.DynamicSlot` | Connection slot that reveals sub-inputs when connected (not yet used by core nodes) |
 | FLOW_CONTROL | `io.FlowControl` | Internal testing only |
 | ACCUMULATION | `io.Accumulation` | Internal testing only |
 
@@ -235,15 +256,18 @@ Combine conditioning: `result = cond_a + cond_b` (list concatenation).
 ```python
 class VideoInput(ABC):
     def get_components(self) -> VideoComponents    # images tensor + audio + frame_rate
-    def save_to(self, path, format, codec, metadata)
-    def as_trimmed(self, start_time, duration) -> VideoInput | None
+    def save_to(self, path, format, codec, metadata, bit_depth=None)  # bit_depth: None keeps native depth (8 or 10)
+    def as_trimmed(self, start_time=None, duration=None, strict_duration=False) -> VideoInput | None
     def get_stream_source(self) -> str | BytesIO
     def get_dimensions(self) -> tuple[int, int]     # (width, height)
     def get_duration(self) -> float                  # seconds
     def get_frame_count(self) -> int
     def get_frame_rate(self) -> Fraction
     def get_container_format(self) -> str
+    def get_bit_depth(self) -> int                   # 8 or 10 (default implementation returns 8)
 ```
+
+10-bit video is supported end-to-end: loaders report `get_bit_depth()`, and save nodes preserve depth (`yuv420p10le` for 10-bit h264).
 
 Concrete implementations: `VideoFromFile`, `VideoFromComponents` (available via `from comfy_api.latest import InputImpl`).
 
@@ -263,13 +287,14 @@ file_3d.get_bytes()         # raw bytes
 file_3d.save_to("/output/model.glb")
 ```
 
-### MESH and VOXEL
+### MESH, VOXEL and SPLAT
 
 ```python
 from comfy_api.latest import Types
 
 mesh = Types.MESH(vertices=torch.tensor(...), faces=torch.tensor(...))
 voxel = Types.VOXEL(data=torch.tensor(...))
+splat = Types.SPLAT(...)   # gaussian splat data
 ```
 
 ## Widget Types with Special Features
@@ -279,6 +304,13 @@ voxel = Types.VOXEL(data=torch.tensor(...))
 ```python
 io.Color.Input("color", default="#ff0000", socketless=True)
 # Value is a hex string like "#ff0000"
+```
+
+### Colors (palette)
+
+```python
+io.Colors.Input("palette", default=["#ff0000", "#00ff00"], socketless=True)
+# Value is list[str] of hex colors
 ```
 
 ### BoundingBox
@@ -292,14 +324,42 @@ io.BoundingBox.Input("bbox",
 # Value is {"x": int, "y": int, "width": int, "height": int}
 ```
 
+### BoundingBoxes (multiple regions)
+
+```python
+io.BoundingBoxes.Input("regions", default=[], socketless=True)
+# Value is list of {"x": int, "y": int, "width": int, "height": int, "metadata": dict}
+```
+
 ### Curve
 
 ```python
+from comfy_api.input import CurveInput
+
 io.Curve.Input("curve",
     default=[(0.0, 0.0), (1.0, 1.0)],  # linear
     socketless=True,
 )
-# Value is list of (x, y) tuples
+# In execute(), normalize the raw value first:
+curve = CurveInput.from_raw(curve)
+```
+
+### Range (levels editor)
+
+```python
+from comfy_api.input import RangeInput
+
+io.Range.Input("levels",
+    default={"min": 0.0, "max": 1.0},
+    display=None,                # widget visualization mode
+    gradient_stops=None,         # gradient background for the slider
+    show_midpoint=True,          # show gamma midpoint handle
+    midpoint_scale=None,
+    value_min=0.0, value_max=1.0,  # UI bounds
+)
+# In execute(), normalize with RangeInput.from_raw(value):
+# .min_val, .max_val, .midpoint (gamma = -log2(midpoint), 0.5 = linear)
+# .to_lut(size) generates a GIMP-style levels lookup table
 ```
 
 ### MultiCombo

@@ -141,6 +141,18 @@ return io.NodeOutput(ui=ui.PreviewUI3D(
 ))
 ```
 
+### PreviewUI3DAdvanced
+
+3D preview that also carries per-model transforms (used by the Preview3DAdvanced node):
+
+```python
+return io.NodeOutput(ui=ui.PreviewUI3DAdvanced(
+    model_file=saved_result,
+    camera_info=camera_dict,       # supports extended CameraInfo (quaternion/fov/near/far/frustum)
+    model_3d_info=transforms,      # list[Model3DTransform]: position/quaternion/scale per model
+))
+```
+
 ## Saving Images
 
 ### Using ImageSaveHelper

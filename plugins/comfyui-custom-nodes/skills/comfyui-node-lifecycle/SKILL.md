@@ -106,6 +106,33 @@ io.Schema(
 )
 ```
 
+### External Cache Providers
+
+Share cached node outputs across ComfyUI instances (e.g. a shared network cache) by registering a `CacheProvider`:
+
+```python
+from comfy_api.latest import Caching
+
+class MyCacheProvider(Caching.CacheProvider):
+    async def on_lookup(self, context):   # context: node_id, class_type, cache_key_hash
+        ...  # return Caching.CacheValue(outputs=[...], ui={...}) or None on miss
+
+    async def on_store(self, context, value):
+        ...  # store to external storage (dispatched as a background task)
+
+    def should_cache(self, context, value=None) -> bool:
+        return True  # return False to skip external caching for a node
+
+    def on_prompt_start(self, prompt_id): ...
+    def on_prompt_end(self, prompt_id): ...
+
+# Register in ComfyExtension.on_load():
+api = ComfyAPI()
+await api.caching.register_provider(MyCacheProvider())
+```
+
+Providers are consulted on local cache miss, in registration order. Exceptions from providers never break execution.
+
 ## Input Validation: validate_inputs (V3) / VALIDATE_INPUTS (V1)
 
 Validates inputs before execution. Runs during the validation phase.

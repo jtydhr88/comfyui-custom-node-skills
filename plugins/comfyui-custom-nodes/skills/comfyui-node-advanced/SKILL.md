@@ -186,6 +186,23 @@ io.DynamicCombo.Input("outer", options=[
 ])
 ```
 
+## DynamicSlot - Connection-Triggered Inputs
+
+Like `DynamicCombo`, but sub-inputs are revealed when a **connection** is made to the slot instead of when a combo option is selected:
+
+```python
+io.DynamicSlot.Input(
+    slot=io.Image.Input("image"),        # the trigger slot (widget inputs are forced to connection-only)
+    inputs=[                              # revealed when the slot is connected
+        io.Float.Input("blend", default=0.5),
+        io.Boolean.Input("invert", default=False),
+    ],
+)
+# Value type: dict containing the slot value + sub-input values
+```
+
+> Note: `DynamicSlot` is registered infrastructure in `comfy_api.latest` but is not yet used by any core node; treat it as experimental.
+
 ## Node Expansion - Subgraph Injection
 
 Nodes can return a subgraph that replaces themselves during execution:
