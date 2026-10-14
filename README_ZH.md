@@ -1,8 +1,8 @@
 # ComfyUI 自定义节点 Skills
 
-一套面向 [Claude Code Skills](https://docs.anthropic.com/en/docs/claude-code/skills) 与 [OpenAI Codex](https://developers.openai.com/codex/build-skills) 的 ComfyUI 自定义节点开发知识库，涵盖 V3（推荐）和 V1（旧版）两套 API。
+一套面向多种 AI Agent（包括 [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills)、[OpenAI Codex](https://developers.openai.com/codex/build-skills) 与 [GitHub Copilot](https://docs.github.com/en/copilot)）的 ComfyUI 自定义节点开发知识库，涵盖 V3（推荐）和 V1（旧版）两套 API。
 
-所有 `SKILL.md` 文件遵循开放的 [agentskills.io](https://agentskills.io) 标准，Claude Code 与 Codex 通用——装一次，两个 Agent 都能用。
+所有 `SKILL.md` 文件遵循开放的 [agentskills.io](https://agentskills.io) 标准，各 Agent 通用——装一次，处处可用。
 
 > **[English](README.md)**
 
@@ -85,6 +85,35 @@ cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-nod
 
 在 Codex 中执行 `/skills` 列出可用 Skills，或使用 `$comfyui-node-basics` 显式调用。
 
+### GitHub Copilot
+
+#### 自动加载（云端及本地 VSCode）
+
+`.github/copilot-instructions.md` 文件会被云端和本地 VSCode 的 Copilot 作为仓库级指令自动读取，无需任何配置。若要使用 Skills 本身，请按照下方的插件市场或直接安装步骤，通过 Copilot CLI 安装插件。
+
+#### 插件市场（Copilot CLI — 推荐）
+
+```bash
+# 注册插件市场（只需一次）
+copilot plugin marketplace add jtydhr88/comfyui-custom-node-skills
+
+# 浏览并安装
+copilot plugin marketplace browse comfyui-custom-node-skills
+copilot plugin install comfyui-custom-nodes@comfyui-custom-node-skills
+```
+
+#### 直接安装（Copilot CLI）
+
+```bash
+copilot plugin install jtydhr88/comfyui-custom-node-skills:plugins/comfyui-custom-nodes
+```
+
+#### 验证
+
+```text
+/skills list
+```
+
 ## 使用示例
 
 ```
@@ -108,7 +137,7 @@ cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-nod
 - **源码验证** — 与 ComfyUI 前后端源码交叉比对，确保准确
 - **覆盖全面** — 从基础节点创建到 DynamicCombo、节点展开等高级模式
 - **前端扩展** — 完整的 JavaScript 扩展系统，包含 15+ 生命周期钩子
-- **多 Agent 通用** — 同一份 `SKILL.md` 兼容 Claude Code 与 Codex（开放 agentskills.io 标准）
+- **多 Agent 通用** — 同一份 `SKILL.md` 兼容所有支持 agentskills.io 标准的 Agent（包括 GitHub Copilot）
 
 ## 数据来源
 

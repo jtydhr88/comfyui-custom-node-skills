@@ -85,6 +85,35 @@ cp -r comfyui-custom-node-skills/plugins/comfyui-custom-nodes/skills/comfyui-nod
 
 In Codex, run `/skills` to list available skills, or invoke one explicitly with `$comfyui-node-basics`.
 
+### GitHub Copilot
+
+#### Automatic (cloud and local VSCode)
+
+The `.github/copilot-instructions.md` file is read automatically by GitHub Copilot as repository-wide instructions in both cloud and local VSCode contexts — no setup needed. To make the Skills themselves available, install the plugin via the Copilot CLI using the marketplace or direct install steps below.
+
+#### Plugin marketplace (Copilot CLI — recommended)
+
+```bash
+# Register the marketplace (once)
+copilot plugin marketplace add jtydhr88/comfyui-custom-node-skills
+
+# Browse and install
+copilot plugin marketplace browse comfyui-custom-node-skills
+copilot plugin install comfyui-custom-nodes@comfyui-custom-node-skills
+```
+
+#### Direct install (Copilot CLI)
+
+```bash
+copilot plugin install jtydhr88/comfyui-custom-node-skills:plugins/comfyui-custom-nodes
+```
+
+#### Verify
+
+```text
+/skills list
+```
+
 ## Usage Examples
 
 ```
