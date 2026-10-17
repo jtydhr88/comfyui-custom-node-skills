@@ -72,7 +72,7 @@ getCustomWidgets(app) {
         MY_WIDGET(node, inputName, inputData, app) {
             const widget = node.addWidget("text", inputName, "", () => {});
             widget.serializeValue = () => widget.value;
-            return { widget };
+            return { widget };  // or { widget, minWidth, minHeight }; v1.54+ also accepts `return widget`
         },
     };
 },
@@ -155,6 +155,18 @@ async afterConfigureGraph(missingNodeTypes, app) {
 },
 ```
 
+### beforeLoadGraph / afterLoadGraph (v1.53.5+) / onGraphLoadError (v1.54.2+)
+
+Bracket a whole workflow load (including API-JSON and A1111 imports, which skip `beforeConfigureGraph`). Order: `beforeLoadGraph` → `beforeConfigureGraph` → `afterConfigureGraph` → `afterLoadGraph`; `onGraphLoadError` runs instead of the `after*` hooks when the load fails.
+
+```javascript
+beforeLoadGraph(app) { /* e.g. suspend your own listeners */ },
+afterLoadGraph(app) { /* graph fully loaded */ },
+onGraphLoadError(error, app) { /* undo whatever beforeLoadGraph started */ },
+```
+
+Upcoming (unreleased): graph loads are queued, and calling `app.loadGraphData()` / `loadApiJson()` / `handleFile()` from inside any graph-load hook rejects ("cannot start a nested graph load"). Defer it (`setTimeout`) if you must load another graph.
+
 ### getSelectionToolboxCommands — Add commands to selection toolbox
 
 ```javascript
@@ -224,14 +236,39 @@ widget.beforeQueued = function ({ isPartialExecution } = {}) {
 
 // Called after prompt is queued
 widget.afterQueued = function ({ isPartialExecution } = {}) {
-    // Reset or update widget (e.g. control_after_generate)
+    // Reset or update widget. Core control_after_generate now also applies
+    // on partial runs (v1.53.5+); the flag is still passed for your own logic.
 };
 
-// Custom serialization
+// Custom serialization (may be async; it is awaited)
 widget.serializeValue = function (node, index) {
     return JSON.stringify(this.value);
 };
 ```
+
+### Widget Rules (store-backed widgets, v1.53+)
+
+Widget values live in a store keyed by `graphId:nodeId:widgetName`:
+
+- **Names must be unique per node.** A repeat is renamed to `name#1`, `name#2`… or refused if it cannot be renamed (v1.58+); before that it silently overwrote the first widget's value.
+- **Don't rename a widget after adding it** — the stored value stays under the old name. Remove it and add a new one.
+- **Remove with `node.removeWidget(widget)`**, not by splicing `node.widgets`.
+- **`node.widgets` may be `undefined`** until first assigned: `node.widgets ??= []`, `node.widgets?.length ?? 0`.
+- **Create widgets via `addWidget` / `addCustomWidget` / `addDOMWidget`** (or a `BaseWidget` subclass). A plain object pushed onto `node.widgets` is never registered.
+
+### Hiding Widgets
+
+```javascript
+widget.hidden = true;            // hide everywhere at runtime (still serialized; works in Nodes 2.0)
+widget.advanced = true;          // show only when "show advanced" is on
+
+// Per-surface policy at creation (v1.55.6+); all three keys are required
+node.addWidget("text", "debug", "", null, {
+    surfaces: { canvas: "shown", vueNode: "never", panel: "never" },  // "shown" | "advanced" | "never"
+});
+```
+
+`options.canvasOnly` (= `vueNode`/`panel: "never"`) is deprecated but still honored; `options.hideInPanel` hides only from the right side panel.
 
 ## Declarative Extension Properties
 
@@ -246,6 +283,8 @@ app.registerExtension({
             label: "Do Something",
             icon: "pi pi-bolt",
             function: () => { console.log("Executed!"); },
+            // v1.55.14+: refuse to run while the canvas is select-only
+            mutatesGraph: true,  // or () => boolean
         },
     ],
 });
@@ -277,11 +316,13 @@ settings: [
         id: "my.ext.mode",
         name: "Processing Mode",
         type: "combo",
-        options: ["fast", "quality", "balanced"],
+        options: ["fast", "quality", "balanced"],  // or (currentValue) => [...] for dynamic options
         defaultValue: "balanced",
     },
 ],
 ```
+
+`onChange(newValue, oldValue)` may be async.
 
 **Setting types**: `boolean`, `number`, `slider`, `knob`, `combo`, `radio`, `text`, `image`, `color`, `url`, `hidden`, `backgroundImage`
 
@@ -300,9 +341,13 @@ async setup(app) {
         destroy: () => {
             // Cleanup
         },
+        // v1.58+: return true to handle the click yourself (skips default open/close)
+        onToggle: async () => false,
     });
 },
 ```
+
+`type: "vue"` tabs (`component: MyVueComponent`) must bundle their own Vue UI libraries — the host no longer provides PrimeVue (upcoming; see Breaking Changes).
 
 ### Bottom Panel Tabs
 
@@ -414,24 +459,58 @@ app.api.addEventListener("my_extension.update", ({ detail }) => {
 });
 ```
 
-## Toast Notifications
+### Calling Your Own Routes
 
 ```javascript
-app.extensionManager.toast.add({
-    severity: "info",  // "success", "info", "warn", "error"
-    summary: "Title",
-    detail: "Message content",
-    life: 3000,  // auto-dismiss after ms
+// fetchApi prefixes /api and adds auth headers
+const res = await app.api.fetchApi("/my_extension/process", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    timeoutMs: null,  // v1.55.2+: default aborts after 60 s without response headers (TimeoutError)
 });
+```
+
+Pass `timeoutMs: null` (or a larger number) for slow synchronous routes; your own `signal` is still honored.
+
+## Toast Notifications
+
+v1.58+ API — `success` / `info` / `warning` / `error` / `loading(title, options?)` return a `ToastId`:
+
+```javascript
+const toast = app.extensionManager.toast;
+const id = toast.loading("Processing…");
+// Reusing `id` replaces that toast in place
+toast.success("Done", {
+    id,
+    description: "3 images saved",
+    duration: 3000,              // ms; default is no auto-dismiss
+    closable: true,
+    action: { label: "Open", onClick: () => { /* ... */ } },  // does not auto-dismiss
+});
+toast.dismiss(id);               // returns true if a toast was removed
+toast.dismissAll();
+```
+
+Older frontends only have `add()`. It still works on v1.58+ but is deprecated; feature-detect:
+
+```javascript
+if (toast.success) toast.success("Saved", { description: "Done", duration: 3000 });
+else toast.add({ severity: "success", summary: "Saved", detail: "Done", life: 3000 });
+// add() severities: "success" | "info" | "warn" | "error" ("secondary"/"contrast" → info).
+// group/styleClass are ignored and remove()/removeAll() are gone on v1.58+.
 ```
 
 ## Dialogs
 
 ```javascript
-// Confirmation dialog
+// Confirmation dialog — resolves true / false, or null if dismissed
 const result = await app.extensionManager.dialog.confirm({
     title: "Confirm Action",
     message: "Are you sure?",
+    type: "delete",            // optional: "default" | "overwrite" | "delete" | "info" | ...
+    itemList: ["a.png"],       // optional bullet list under the message
+    hint: "Cannot be undone",  // optional
+    key: "my-ext-confirm",     // v1.53+: own dialog key so an already-open shared prompt can't swallow it
 });
 
 // Prompt dialog
@@ -514,10 +593,20 @@ node.onDragOver = function(event) { /* file drag over */ };
 node.onDragDrop = function(event) { /* file dropped */ };
 ```
 
-## Recent Breaking Changes (frontend ≥ 1.4x, mid-2026)
+## Recent Breaking Changes (frontend 1.4x – 1.58, plus upcoming)
 
-Changes extension authors should be aware of:
+Changes extension authors should be aware of. Upstream migration notes with details: https://github.com/Comfy-Org/ComfyUI_frontend/tree/main/docs/extensions (`widgets-migration.md`, `connection-callbacks-migration.md`, `serialization-callbacks-migration.md`, `node-geometry-migration.md`, `link-registration-migration.md`, `primevue-removal-migration.md`, `tooltip-migration.md`).
 
+- **PrimeVue removed (upcoming, after v1.58)** — no `$primevue`, no PrimeVue theme, no global `--p-*` CSS variables. Use design tokens instead: `--primary-background`, `--base-foreground`, `--muted-foreground`, `--base-background`, `--secondary-background`, `--border-default`. To keep using PrimeVue components, mount your own Vue app with PrimeVue installed. `pi pi-*` icon classes still work.
+- **PrimeVue tooltip gone (v1.58+)** — no `v-tooltip` / `.p-tooltip`. An open tooltip is `[data-slot="tooltip-content"]` on `document.body`.
+- **Toast API replaced (v1.58+)** — see Toast Notifications. `add()` / `addAlert()` are deprecated; `remove()` / `removeAll()` are removed.
+- **Widget values are store-backed (v1.53+)** — see Widget Rules (unique names, `removeWidget`, `node.widgets ??= []`).
+- **`input.link` / `output.links` deprecated (v1.53+)** — reads still work but warn and may lag the graph. Writes no longer change links, except that `input.link = null` disconnects. Use `node.isInputConnected(i)`, `node.getInputLink(i)`, `node.isOutputConnected(i)`, `node.getOutputNodes(i)`, `node.connect()`, `node.disconnectInput(i)`. The `node:slot-links:changed` and `node:slot-errors:changed` graph events are removed. For add/remove notifications with several subscribers, use `graph.events.addEventListener("node:added" | "node:before-removed" | "node:removed", ...)`.
+- **`onConfigure(data)` receives a shallow copy (v1.55.2+)** — changing top-level keys of `data` has no effect. Persist custom state in `node.properties` / `graph.extra`.
+- **Core node fields are accessors (v1.53+)** — `id`, `type`, `title`, `mode`, `flags`, `color`, `bgcolor`, `shape` no longer appear in `Object.keys(node)` / `{...node}`; use `node.serialize()`. Changing `node.type` after construction warns.
+- **`node.size` is the requested size** — `getBounding()` / `boundingRect` give the rendered footprint (can be larger). `canvas.repositionNodesVueMode()` → `canvas.applyNodePositions()` (old name kept as deprecated alias).
+- **`canvas.selected_nodes` deprecated (upcoming)** — warns and returns a snapshot. Read `canvas.selectedItems` (a snapshot Set; re-read it after `add`/`delete`) and change the selection with `canvas.selectItems(items, addToCurrent?)`.
+- **Minor deprecations** — `node.badgePosition` (badges always render top-right; assignment is ignored), `node.widgets_up` (use `widgets_start_y`), `options.canvasOnly` (use `options.surfaces`).
 - **Group nodes removed** — group nodes can no longer be created; workflows containing them auto-convert to **subgraphs** on load. `GroupNodeHandler` / `GroupNodeConfig` remain re-exported for backward compatibility only. Use subgraphs for new work.
 - **`LiteGraph.use_uuids` removed** — node IDs are always numeric. Don't read or set this flag (UUIDs are still used internally for subgraph/slot IDs).
 - **`LGraph.onGetNodeMenuOptions` removed**; **`LGraph.onBeforeChange` deprecated** — assigning it still works but warns; use `LGraphCanvas.onBeforeChange` instead.
@@ -533,7 +622,7 @@ import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 ```
 
-Symbols are also accessible via `window.comfyAPI.<module>.<export>`.
+Symbols are also accessible via `window.comfyAPI.<module>.<export>`. Only directly declared exports (`export const|let|var|function|class`) are shimmed; re-exports such as `export { x } from "..."` are not reachable this way.
 
 ### Stability Levels
 
@@ -547,9 +636,9 @@ Symbols are also accessible via `window.comfyAPI.<module>.<export>`.
 
 - **`scripts/api`** — `ComfyApi` class: `fetchApi()`, `queuePrompt()`, `getNodeDefs()`, WebSocket events, settings, user data, system stats
 - **`scripts/app`** — `ComfyApp` singleton (`app`): graph operations, `registerExtension()`, `extensionManager`, clipboard, coordinate conversion
-- **`scripts/widgets`** — `ComfyWidgets` registry (INT, FLOAT, STRING, BOOLEAN, COMBO, IMAGEUPLOAD, etc.), `addValueControlWidgets()`
+- **`scripts/widgets`** — `ComfyWidgets` registry (INT, FLOAT, STRING, BOOLEAN, COMBO, IMAGEUPLOAD, etc.), `addValueControlWidget(s)()`, `updateControlWidgetLabel()` (`IS_CONTROL_WIDGET` no longer exported since v1.58)
 - **`scripts/domWidget`** — `addDOMWidget()`, `DOMWidgetImpl`, `ComponentWidgetImpl` (Vue component wrapper)
-- **`scripts/utils`** — `clone()`, `addStylesheet()`, `uploadFile()`, `downloadBlob()`, storage helpers
+- **`scripts/utils`** — `clone()`, `addStylesheet()`, `uploadFile()`, storage helpers
 - **`scripts/pnginfo`** — `getPngMetadata()`, `getWebpMetadata()`, `importA1111()`, format-specific extractors
 
 For full API details, see the [API Reference](api-reference.md).

@@ -36,7 +36,7 @@ import { api, ComfyApi } from "../../scripts/api.js";
 - `fileURL(route)` — file access URL
 
 **Fetch:**
-- `fetchApi(route, options?)` — authenticated `fetch` wrapper (adds auth headers)
+- `fetchApi(route, options?)` — authenticated `fetch` wrapper (prefixes `/api`, adds auth headers). v1.55.2+: `options.timeoutMs` (default 60000 ms until response headers arrive, then aborts with `TimeoutError`; `null` disables it)
 
 **Node definitions:**
 - `getNodeDefs()` — fetch all node definitions from `/object_info`
@@ -113,6 +113,7 @@ import { api, ComfyApi } from "../../scripts/api.js";
 | Event | When |
 |---|---|
 | `graphChanged` | Workflow graph modified |
+| `autoQueueGraphChanged` | Prompt-relevant change while "Run (on change)" is active (ignores layout/title/viewport edits) |
 | `promptQueueing` | Before prompt is queued |
 | `promptQueued` | After prompt is queued |
 | `graphCleared` | Graph cleared |
@@ -142,16 +143,21 @@ import { app, ComfyApp } from "../../scripts/app.js";
 | `ui` | `ComfyUI` | Legacy UI instance |
 | `extensionManager` | `ExtensionManager` | Extension lifecycle manager (sidebar, toast, dialog, commands, settings) |
 | `graph` | `LGraph` | Root LiteGraph graph (deprecated, use `rootGraph`) |
-| `rootGraph` | `LGraph` | Root LiteGraph graph |
-| `canvas` | `LGraphCanvas` | LiteGraph canvas instance |
+| `rootGraph` | `LGraph` | Root LiteGraph graph (logs an error if read before init) |
+| `rootGraphOrUndefined` | `LGraph \| undefined` | Same, without the error (v1.55.11+) |
+| `isGraphReady` | boolean | Whether the root graph exists (safe, reactive) |
+| `canvas` | `LGraphCanvas` | LiteGraph canvas instance (set during `setup`) |
+| `canvasOrUndefined` | `LGraphCanvas \| undefined` | `undefined` before setup (v1.58+) |
 | `canvasEl` | `HTMLCanvasElement` | Canvas DOM element |
-| `nodeOutputs` | object | Execution output data per node ID |
+| `nodeOutputs` | object | Execution output data per node ID; writes (`app.nodeOutputs[id] = out`, `delete`) sync to the output store (v1.53.2+) |
 | `nodePreviewImages` | object | Preview images per node |
 | `configuringGraph` | boolean | Whether graph is being configured |
 | `vueAppReady` | boolean | Whether Vue app is mounted |
 | `bodyTop/Left/Right/Bottom` | HTMLElement | Layout DOM elements |
 | `canvasContainer` | HTMLElement | Canvas container element |
 | `menu` | `ComfyAppMenu` | App menu instance |
+
+**Deprecated `app` members** (still work): `graph` → `rootGraph`; `lastNodeErrors` / `lastExecutionError` → `app.extensionManager.*`; `runningNodeId`, `progress`, `shiftDown`, `widgets`, `extensions`, `storageLocation`, `isNewUserSession`, `resetView()`.
 
 ### `app` Methods
 
@@ -162,8 +168,10 @@ import { app, ComfyApp } from "../../scripts/app.js";
 **Graph operations:**
 - `loadGraphData(graphData?, clean?, restore_view?, workflow?, options?)` — load workflow
 - `graphToPrompt(graph?)` — serialize graph to API prompt format
-- `queuePrompt(number, batchCount?, queueNodeIds?)` — queue execution
-- `refreshComboInNodes()` — refresh all combo widget options
+- `queuePrompt(number, batchCount?, { queueNodeIds?, intent? })` — queue execution (v1.49+ options object; the old `queuePrompt(n, batch, queueNodeIds[])` form still works)
+- `loadApiJson(apiData, fileName)` / `isApiJson(data)` — import API-format prompts
+- `refreshComboInNodes()` / `reloadNodeDefs()` — refresh combo options / re-fetch node definitions
+- `refreshMissingModels({ silent?, reloadDefs? })` — re-run missing-model detection
 - `clean()` — reset state
 - `getNodeDefs()` — fetch node definitions
 
@@ -201,7 +209,9 @@ import { ComfyWidgets, addValueControlWidgets } from "../../scripts/widgets.js";
 
 Built-in widget constructors keyed by type string:
 
-`INT`, `FLOAT`, `BOOLEAN`, `STRING`, `MARKDOWN`, `COMBO`, `IMAGEUPLOAD`, `COLOR`, `IMAGECOMPARE`, `BOUNDING_BOX`, `CHART`, `GALLERIA`, `PAINTER`, `TEXTAREA`, `CURVE`, `RANGE`, `BOUNDING_BOXES`, `COLORS` (plus dynamically registered widgets)
+`INT`, `FLOAT`, `BOOLEAN`, `STRING`, `MARKDOWN`, `COMBO`, `IMAGEUPLOAD`, `COLOR`, `IMAGECOMPARE`, `BOUNDING_BOX`, `CHART`, `GALLERIA`, `PAINTER`, `COMPOSITOR`, `TEXTAREA`, `CURVE`, `RANGE`, `VIDEO_EDIT`, `RESOLUTION_PREVIEW`, `BOUNDING_BOXES`, `LIGHT_INFO_PREVIEW`, `COLORS`, `COMFY_DYNAMICCOMBO_V3`, `COMFY_DYNAMICGROUP_V3` (v1.57+) (plus widgets registered by extensions via `getCustomWidgets`). `isValidWidgetType(key)` checks this registry.
+
+`GALLERIA` values are arrays of image URL strings; PrimeVue image objects (`itemImageSrc`) and Galleria options are no longer supported.
 
 **Widget constructor signature:**
 ```typescript
@@ -217,14 +227,23 @@ type ComfyWidgetConstructor = (
 ### Control Widget Helpers
 
 ```javascript
-import { addValueControlWidgets, IS_CONTROL_WIDGET } from "../../scripts/widgets.js";
+import { addValueControlWidget, addValueControlWidgets } from "../../scripts/widgets.js";
 
-// Add increment/decrement/randomize control to a seed widget
-addValueControlWidgets(node, targetWidget, "fixed", undefined, opts);
+// Add a fixed/increment/decrement/randomize control to a seed widget
+const control = addValueControlWidget(node, seedWidget, "randomize");
 
-// Check if a widget is a control widget
-if (widget[IS_CONTROL_WIDGET]) { /* ... */ }
+// Lower-level form: returns [controlWidget, ...filterWidgets]
+addValueControlWidgets(node, seedWidget, "fixed", {
+    addFilterList: false,               // combo targets add a filter text widget unless false
+    controlAfterGenerateName: "my_control",
+});
+
+// Find the control of a core INT/FLOAT/COMBO widget (core sets linkedWidgets)
+const ctrl = seedWidget.linkedWidgets?.[0]
+    ?? node.widgets?.find((w) => w.name === "control_after_generate");
 ```
+
+`IS_CONTROL_WIDGET` is no longer exported from `scripts/widgets.js` (v1.58+); the value-control code moved to `src/core/graph/widgets/` but the helpers above are still re-exported. The control's label follows the `Comfy.WidgetControlMode` setting ("before"/"after"), and `updateControlWidgetLabel(widget)` refreshes it.
 
 ---
 
@@ -248,19 +267,28 @@ node.addDOMWidget(name, type, element, options);
 - `onHide()` — called when widget hidden
 - `hideOnZoom` — hide when zoomed out
 - `selectOn` — event array for selection (e.g., `["focus", "click"]`)
-- `beforeResize()` / `afterResize()` — resize hooks
+- `getMinHeight()` / `getMaxHeight()` / `getHeight()` — sizing (`getHeight` may return a number or `"50%"`)
+- `onDraw(widget)` — called each canvas draw; `margin` — px around the element
+- `afterResize()` — resize hook (`beforeResize` is deprecated and actually fires after resize)
+- Plus generic widget options such as `hidden`, `surfaces`, `hideInPanel`
+
+A DOM widget whose name duplicates an existing widget on the node may be refused (v1.58+) — keep names unique.
 
 ### ComponentWidgetImpl
 
-For wrapping Vue components as widgets:
+For wrapping Vue components as widgets (the component receives `modelValue`, `widget` and `onUpdate:modelValue` props automatically). The constructor takes a single options object:
 
 ```javascript
 import { ComponentWidgetImpl, addWidget } from "../../scripts/domWidget.js";
 
-const widget = new ComponentWidgetImpl(node, name, {
-  component: MyVueComponent,
-  modelValue: initialValue,
-  "onUpdate:modelValue": (val) => { /* handle change */ },
+let state = {};
+const widget = new ComponentWidgetImpl({
+  node,
+  name: "my_state",
+  component: MyVueComponent,                     // bundled with your extension
+  inputSpec: { name: "my_state", type: "MY_STATE" },
+  props: { accent: "red" },                      // optional extra props
+  options: { getValue: () => state, setValue: (v) => { state = v; } },
 });
 addWidget(node, widget);
 ```
@@ -278,12 +306,14 @@ import { addStylesheet, uploadFile, clone } from "../../scripts/utils.js";
 | Function | Description |
 |---|---|
 | `clone(obj)` | Deep clone via `structuredClone` with JSON fallback |
-| `addStylesheet(url)` | Dynamically add a CSS stylesheet to the page |
-| `uploadFile(type?, multiple?)` | Open file picker dialog, return selected `File` |
+| `addStylesheet(urlOrFile, relativeTo?)` | Add a `<link>` stylesheet; pass `import.meta.url` to load the sibling `.css` of your `.js` |
+| `uploadFile(accept)` | Open a file picker (`accept` like `"image/*"`); resolves to the selected `File` |
+| `applyTextReplacements(app, value)` | Expand `%date:…%` / `%Node.widget%` placeholders |
 | `prop(obj, name, defaultVal, setter?)` | Define reactive getter/setter property |
 | `getStorageValue(id)` | Read from sessionStorage or localStorage |
 | `setStorageValue(id, value)` | Write to both sessionStorage and localStorage |
-| `downloadBlob(filename, blob)` | Download a blob as file |
+
+`downloadBlob` is only a re-export in this module, so it is not available through the `scripts/utils.js` shim.
 
 ---
 
@@ -312,7 +342,7 @@ import { getPngMetadata, getWebpMetadata, importA1111 } from "../../scripts/pngi
 import { $el, ComfyDialog } from "../../scripts/ui.js";
 ```
 
-> **Deprecated**: Removal planned (still present as of v1.48). Use Vue alternatives.
+> **Deprecated**: Removal planned (still present as of v1.58). Use Vue alternatives. `$el` is also exported from `scripts/ui/utils.js`.
 
 | Export | Description |
 |---|---|

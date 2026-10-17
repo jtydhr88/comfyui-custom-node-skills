@@ -1,7 +1,9 @@
 """
 Covers: comfyui-node-advanced
 - MatchType (Template, Input, Output)
-- Switch node with MatchType + lazy
+- Switch node with MatchType + optional lazy inputs + MISSING sentinel
+- Lazy inputs inside Autogrow ((value, key) tuples in check_lazy_status)
+- validate_inputs receiving a rebuilt dynamic (Autogrow) input
 - Autogrow TemplatePrefix
 - Autogrow TemplateNames
 - DynamicCombo (Options, nested)
@@ -41,7 +43,10 @@ class SkillTest_MatchType(io.ComfyNode):
         return io.NodeOutput(value)
 
 
-# --- advanced: Switch node (MatchType + lazy) ---
+# --- advanced: Switch node (MatchType + optional lazy + MISSING sentinel) ---
+MISSING = object()
+
+
 class SkillTest_SwitchNode(io.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -52,8 +57,8 @@ class SkillTest_SwitchNode(io.ComfyNode):
             category="skill_tests/advanced",
             inputs=[
                 io.Boolean.Input("switch"),
-                io.MatchType.Input("on_false", template=template, lazy=True),
-                io.MatchType.Input("on_true", template=template, lazy=True),
+                io.MatchType.Input("on_false", template=template, lazy=True, optional=True),
+                io.MatchType.Input("on_true", template=template, lazy=True, optional=True),
             ],
             outputs=[
                 io.MatchType.Output(template=template, display_name="output"),
@@ -61,15 +66,63 @@ class SkillTest_SwitchNode(io.ComfyNode):
         )
 
     @classmethod
-    def check_lazy_status(cls, switch, on_false=None, on_true=None):
+    def check_lazy_status(cls, switch, on_false=MISSING, on_true=MISSING):
+        # None = connected but not yet evaluated; MISSING = disconnected
         if switch and on_true is None:
             return ["on_true"]
         if not switch and on_false is None:
             return ["on_false"]
 
     @classmethod
-    def execute(cls, switch, on_true, on_false):
-        return io.NodeOutput(on_true if switch else on_false)
+    def execute(cls, switch, on_true=MISSING, on_false=MISSING):
+        selected = on_true if switch else on_false
+        return io.NodeOutput(None if selected is MISSING else selected)
+
+
+# --- advanced: lazy inputs inside Autogrow ((value, key) tuples) ---
+class SkillTest_LazyAutogrow(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SkillTest_LazyAutogrow",
+            display_name="[Test] Lazy Autogrow",
+            category="skill_tests/advanced",
+            inputs=[
+                io.Int.Input("pick", default=0, min=0, max=9),
+                io.Autogrow.Input("images",
+                    template=io.Autogrow.TemplatePrefix(
+                        input=io.Image.Input("img", lazy=True),
+                        prefix="image_",
+                        min=1,
+                        max=10,
+                    ),
+                ),
+            ],
+            outputs=[io.Image.Output("IMAGE")],
+        )
+
+    @classmethod
+    def check_lazy_status(cls, pick, images):
+        # In check_lazy_status only, nested values are (value, original_key) tuples
+        entry = images.get(f"image_{pick}")
+        if entry is None:
+            return []
+        value, key = entry  # key == "images.image_<pick>"
+        return [key] if value is None else []
+
+    @classmethod
+    def execute(cls, pick, images: io.Autogrow.Type):
+        value = images.get(f"image_{pick}")
+        if value is None:
+            raise ValueError(f"image_{pick} is not connected")
+        return io.NodeOutput(value)
+
+    @classmethod
+    def validate_inputs(cls, pick, images):
+        # Dynamic roots are passed rebuilt (nested dict) when named here (v0.40+)
+        if f"image_{pick}" not in images:
+            return f"pick={pick} has no connected image_{pick} slot"
+        return True
 
 
 # --- advanced: Autogrow TemplatePrefix ---

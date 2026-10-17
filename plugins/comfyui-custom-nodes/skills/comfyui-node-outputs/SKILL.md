@@ -1,6 +1,6 @@
 ---
 name: comfyui-node-outputs
-description: ComfyUI node output types - NodeOutput, UI outputs, PreviewImage, PreviewMask, SavedImages, PreviewAudio, PreviewText, PreviewVideo. Use when returning results from nodes, displaying previews, or saving output files.
+description: ComfyUI node output types - NodeOutput, UI outputs, PreviewImage, PreviewMask, SavedImages, PreviewAudio, PreviewText, PreviewVideo, Saved3DModels. Use when returning results from nodes, displaying previews, or saving output files.
 ---
 
 # ComfyUI Node Outputs
@@ -141,17 +141,21 @@ return io.NodeOutput(ui=ui.PreviewUI3D(
 ))
 ```
 
-### PreviewUI3DAdvanced
+### Saved3DModels (standard 3D output, v0.40+)
 
-3D preview that also carries per-model transforms (used by the Preview3DAdvanced node):
+All core 3D save/preview nodes now report models as standard `"3d"` output items (shown in queue/assets like images):
 
 ```python
-return io.NodeOutput(ui=ui.PreviewUI3DAdvanced(
-    model_file=saved_result,
-    camera_info=camera_dict,       # supports extended CameraInfo (quaternion/fov/near/far/frustum)
+# Constructor: Saved3DModels(results: list[SavedResult], camera_info=None, model_3d_info=None)
+# -> {"3d": results, "camera_info": [camera_info], "model_3d_info": [...]}
+return io.NodeOutput(ui=ui.Saved3DModels(
+    [ui.SavedResult("model.glb", "", io.FolderType.output)],   # or FolderType.temp for previews
+    camera_info=camera_dict,       # extended CameraInfo (quaternion/fov/near/far/frustum)
     model_3d_info=transforms,      # list[Model3DTransform]: position/quaternion/scale per model
 ))
 ```
+
+`ui.PreviewUI3DAdvanced(model_file, camera_info, model_3d_info, folder_type=None)` still exists as a subclass, but `model_file` is now a relative path **string** (`"subfolder/model.glb"`, default folder `output`) and it emits the `"3d"` format above, not `{"result": [...]}`.
 
 ## Saving Images
 
@@ -287,7 +291,7 @@ results = ui.AudioSaveHelper.save_audio(
     filename_prefix="audio",
     folder_type=io.FolderType.output,
     cls=cls,
-    format="flac",                       # "flac", "mp3", or "opus"
+    format="flac",                       # "flac", "mp3", or "opus" (anything else raises ValueError)
     quality="128k",                      # MP3: "V0","128k","320k"; Opus: "64k"-"320k"
 )
 
@@ -325,6 +329,15 @@ class SaveAudioNode(io.ComfyNode):
 - **Previews** (PreviewImage, etc.) save to the `temp` directory and are ephemeral
 - **Saves** (ImageSaveHelper.save_images) save to the `output` directory permanently
 - Use `io.FolderType.temp`, `io.FolderType.output`, or `io.FolderType.input`
+
+## How Core Post-Processes UI Output
+
+After `execute`, every file entry (`{"filename", "subfolder", "type"}`) in the UI dict is enriched before it is sent/stored:
+- `metadata`: for image/video files, `{"kind", "width", "height"}` (+ `duration`, `fps`, `frame_count` for video) is added unless the entry already has `metadata` (v0.40+).
+- With the assets system on (default only in the Windows standalone build), `id` / `preview_id` are added; on a **cache-hit replay `id`/`preview_id` are stripped from every dict entry**, and an `asset_preview` key is consumed by core.
+- The UI dict is deep-copied each run.
+
+So don't use `id`, `preview_id`, `metadata` or `asset_preview` as your own keys in UI entries, and keep UI values small and JSON-serializable.
 
 ## V1 Output Patterns (Legacy Reference)
 

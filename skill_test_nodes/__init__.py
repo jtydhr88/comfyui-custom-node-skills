@@ -57,6 +57,7 @@ from .nodes_outputs import (
     SkillTest_SaveAudio,
     SkillTest_ManualSave,
     SkillTest_NoOutput,
+    SkillTest_Saved3DModels,
 )
 from .nodes_datatypes import (
     SkillTest_ImageOps,
@@ -75,6 +76,7 @@ from .nodes_datatypes import (
 from .nodes_advanced import (
     SkillTest_MatchType,
     SkillTest_SwitchNode,
+    SkillTest_LazyAutogrow,
     SkillTest_AutogrowPrefix,
     SkillTest_AutogrowNames,
     SkillTest_DynamicCombo,
@@ -146,6 +148,7 @@ class SkillTestExtension(ComfyExtension):
             SkillTest_SaveAudio,
             SkillTest_ManualSave,
             SkillTest_NoOutput,
+            SkillTest_Saved3DModels,
             # datatypes
             SkillTest_ImageOps,
             SkillTest_MaskOps,
@@ -162,6 +165,7 @@ class SkillTestExtension(ComfyExtension):
             # advanced
             SkillTest_MatchType,
             SkillTest_SwitchNode,
+            SkillTest_LazyAutogrow,
             SkillTest_AutogrowPrefix,
             SkillTest_AutogrowNames,
             SkillTest_DynamicCombo,

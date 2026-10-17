@@ -109,7 +109,10 @@ opencv-python>=4.8.0
 requests>=2.28.0
 ```
 
-**Important**: Only list dependencies not already included with ComfyUI. ComfyUI ships with: `torch`, `torchvision`, `torchaudio`, `numpy`, `PIL/Pillow`, `scipy`, `safetensors`, `transformers`, `accelerate`.
+**Important**: Only list dependencies not already included with ComfyUI. ComfyUI's `requirements.txt` includes: `torch`, `torchvision`, `torchsde`, `numpy`, `einops`, `transformers`, `tokenizers`, `sentencepiece`, `safetensors`, `aiohttp`, `pyyaml`, `Pillow`, `scipy`, `tqdm`, `psutil`, `av` (>=17), `requests`, `blake3`, plus non-essential `kornia`, `spandrel`, `pydantic`.
+
+- **`torchaudio` is no longer a ComfyUI dependency (v0.38+)** — list it yourself if you import it, or use core `comfy.audio` (`resample`, `MelSpectrogram`, `bass_biquad`, `equalizer_biquad`, `treble_biquad`). `accelerate` is not included either.
+- Officially supported minimum PyTorch is 2.7; Python 3.10 still works but logs an EOL warning.
 
 ## pyproject.toml
 
@@ -234,7 +237,7 @@ from comfy_api.latest import ComfyExtension, io, ui
 from comfy_api.latest import ComfyAPI          # async runtime API (use with await)
 from comfy_api.latest import ComfyAPISync      # sync runtime API (use in sync execute)
 from comfy_api.latest import Input             # Input.Image, Input.Audio, Input.Mask, Input.Latent, Input.Video
-from comfy_api.latest import InputImpl         # InputImpl.VideoFromFile, InputImpl.VideoFromComponents
+from comfy_api.latest import InputImpl         # InputImpl.VideoFromFile, .VideoFromComponents, .VideoFromList
 from comfy_api.latest import Types             # Types.MESH, Types.VOXEL, Types.File3D, Types.VideoCodec
 from typing_extensions import override
 
@@ -265,6 +268,13 @@ folder_paths.add_model_folder_path("my_models", "/path/to/models")
 
 # Get model file list
 models = folder_paths.get_filename_list("checkpoints")
+path = folder_paths.get_full_path_or_raise("checkpoints", name)   # resolve a combo value safely
+
+# Path containment check before reading/writing user-supplied paths
+folder_paths.is_within_directory(base_dir, candidate_path)
+
+# Dataset files live in the "datasets" folder type (v0.30+)
+dataset_dirs = folder_paths.get_folder_paths("datasets")
 ```
 
 ## Publishing to ComfyUI Registry
@@ -327,6 +337,7 @@ This generates the boilerplate structure with all necessary files.
 ## Node ID Best Practices
 
 - Use a **globally unique** prefix: `"MyProject_NodeName"` or `"username.NodeName"`
+- A `node_id` that collides with a core node is ignored entirely — class and display name (v0.35+)
 - Never change `node_id` after release (breaks saved workflows)
 - Use `display_name` for user-facing name changes
 - Use `search_aliases` for discoverability: `search_aliases=["alias1", "alias2"]`
@@ -372,6 +383,11 @@ class MyExtension(ComfyExtension):
             pass
         return nodes
 ```
+
+## Deployment Constraints
+
+- **Disabled nodes**: users can prune node IDs with `--disabled-nodes-config file.yaml` (`disabled_nodes: [ids]`), and `--disable-partner-nodes` / `--offline` (the old `--disable-api-nodes` is a deprecated alias of `--offline`). Don't assume another pack's (or a partner) node exists, e.g. in `GraphBuilder` expansions.
+- **Governed builds** (v0.40+, organization policy builds only) pin packs by a BLAKE3 digest of their `.py/.pyw/.pyd/.so/.dll/.dylib/.js/.mjs` files and refuse packs that contain `__pycache__`/`.pyc` files or symlinks. Ship source only, and never rewrite or auto-update your own code files at runtime.
 
 ## See Also
 

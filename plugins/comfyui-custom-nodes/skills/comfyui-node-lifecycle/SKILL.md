@@ -15,7 +15,8 @@ Understanding the execution lifecycle helps build efficient, correct nodes.
    ├── Look up each node class
    ├── Call INPUT_TYPES() / define_schema() for input specs
    ├── Validate connections and types
-   └── Call validate_inputs() for each node
+   ├── Call validate_inputs() for each node
+   └── Validate loop boundaries (StartLoop/EndLoop pairing, v0.36+)
 3. Build execution order (topological sort from output nodes)
 4. For each node in order:
    ├── Cache check (fingerprint_inputs)
@@ -133,6 +134,8 @@ await api.caching.register_provider(MyCacheProvider())
 
 Providers are consulted on local cache miss, in registration order. Exceptions from providers never break execution.
 
+On a cache hit the cached UI is resent (with `id`/`preview_id` stripped from UI entries — see `comfyui-node-outputs`). For RAM-cache sizing of custom output objects see `_comfy_cache_tensors` in `comfyui-node-datatypes`.
+
 ## Input Validation: validate_inputs (V3) / VALIDATE_INPUTS (V1)
 
 Validates inputs before execution. Runs during the validation phase.
@@ -175,6 +178,19 @@ def VALIDATE_INPUTS(s, width, height):
         return "Width must be a multiple of 8"
     return True
 ```
+
+### Dynamic Inputs in validate_inputs (v0.40+)
+
+Name the **root** id of an Autogrow / DynamicCombo input to receive its rebuilt nested value; dynamic roots you don't name are not passed. `**kwargs` receives everything, nested.
+
+```python
+@classmethod
+def validate_inputs(cls, rows):          # rows = {"item0": 0.5, ...} (Autogrow)
+    return True if rows else "Connect at least one row"
+```
+
+- Returning `False`/a string is reported even when no inputs were passed.
+- Malformed dynamic keys fail validation with error type `invalid_dynamic_input`.
 
 ### Skipping Type Validation
 
@@ -297,8 +313,16 @@ def execute(cls, data):
         "my_extension.status",
         {"message": "Processing complete", "progress": 100}
     )
+    # Status text shown on the node (binary TEXT event; sid=None broadcasts)
+    PromptServer.instance.send_progress_text("Step 3 / 10", cls.hidden.unique_id)
     return io.NodeOutput(data)
 ```
+
+- Dict payloads that contain `"prompt_id"` get the prompt's `workflow_metadata` (e.g. `workflow_id`) merged in (v0.40+) — include `prompt_id` so clients can route the message to its workflow.
+
+## Logging
+
+Use `logging`. For verbose diagnostics below INFO use the DETAIL level (v0.30+): `from comfy.internal_logging import detail; detail("msg %s", x)`, shown with `--verbose DETAIL` or written with `--verbose DETAIL path.log`. (The module is `comfy.internal_logging`, not `comfy.logging`.)
 
 ## Complete Lifecycle Example
 

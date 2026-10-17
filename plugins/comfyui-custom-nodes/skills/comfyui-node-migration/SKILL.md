@@ -231,6 +231,11 @@ async def comfy_entrypoint() -> MyExtension:
 | `("BBOX",)` | `io.BBOX.Input("id")` |
 | `("SEGS",)` | `io.SEGS.Input("id")` |
 | `("IMAGECOMPARE",)` | `io.ImageCompare.Input("id")` |
+| `("LAYERS",)` | `io.Layers.Input("id")` |
+| `("COMPOSITOR",)` | `io.Compositor.Input("id")` |
+| `("CAMERA_INFO_STATE",)` | `io.CameraInfoState.Input("id")` |
+| `("VIDEO_EDIT",)` | `io.VideoEdit.Input("id", features=["trim", "crop"])` |
+| `("RESOLUTION_PREVIEW",)` | `io.ResolutionPreview.Input("id")` |
 | `("*",)` | `io.AnyType.Input("id")` or `io.MultiType.Input("id", types=[...])` |
 
 ## Method Migration

@@ -25,7 +25,7 @@ io.Int.Input("seed",
 
 **NumberDisplay options**: `io.NumberDisplay.number`, `io.NumberDisplay.slider`, `io.NumberDisplay.gradient_slider`
 
-**ControlAfterGenerate options**: `True` (default randomize), or `io.ControlAfterGenerate.fixed`, `.increment`, `.decrement`, `.randomize`
+**ControlAfterGenerate options**: `True` (default randomize), or `io.ControlAfterGenerate.fixed`, `.increment`, `.decrement`, `.randomize`. A mode value is treated as the control's *starting mode* only from frontend v1.57.0 (#19867); older frontends used the string as the control widget's name.
 
 ### FLOAT
 
@@ -118,6 +118,8 @@ io.Combo.Input("model_name",
     ),
 )
 ```
+
+**Security**: treat combo / `DynamicCombo` values as untrusted when they reach the filesystem. Re-validate any value used as a file/folder name, path, format or extension at the load/save boundary (`folder_paths.get_full_path_or_raise(...)`, `folder_paths.is_within_directory(base, path)`, or a fixed allowlist) — prompts can be submitted via the API with values outside `options`.
 
 ### MULTICOMBO (Multi-select Dropdown)
 
@@ -212,6 +214,18 @@ io.ImageCompare.Input("comparison", socketless=True)
 # Value type: dict
 ```
 
+### Newer editor widgets (v0.31–v0.40, need a matching frontend)
+
+```python
+io.VideoEdit.Input("trim", features=["trim"])   # "trim" and/or "crop" (default both)
+# Value: {"trim": {"start_time": float, "duration": float}, "crop": {"x","y","width","height"}}
+#   apply with video.as_trimmed(...) / video.as_cropped(...); zero width/height = full frame
+io.ResolutionPreview.Input("preview",            # live preview of a computed size; optional by default
+    ratio_widget="aspect_ratio", megapixels_widget="megapixels", multiple_widget="multiple")
+io.Compositor.Input("compositor")                # layer-editor state dict (pairs with io.Layers)
+io.CameraInfoState.Input("camera_info_state", optional=True)  # camera editor state dict
+```
+
 ## Input Options (Common to All)
 
 ```python
@@ -294,6 +308,8 @@ class MyNode(io.ComfyNode):
                 io.Hidden.auth_token_comfy_org,  # auth token
                 io.Hidden.api_key_comfy_org,     # API key
                 io.Hidden.comfy_usage_source,    # prompt source, e.g. "comfyui-frontend"
+                # io.Hidden.execution_list exists (v0.36+) but is core-internal and
+                # slated for removal - DO NOT USE
             ],
         )
 
@@ -343,9 +359,12 @@ class ConditionalNode(io.ComfyNode):
 **Rules for lazy evaluation**:
 - Mark inputs with `lazy=True`
 - Implement `check_lazy_status()` classmethod
-- Unevaluated inputs are `None`
+- Unevaluated inputs are `None`; a disconnected *optional* lazy input is absent from kwargs — use a sentinel default (`MISSING = object()`) to distinguish (see the Switch pattern in `comfyui-node-advanced`)
 - Return list of input names that need computing, or empty list
 - Method may be called multiple times
+- Lazy sub-inputs of Autogrow/DynamicCombo arrive as `(value, key)` tuples here (see `comfyui-node-advanced`)
+
+**Input tolerance** (core policy): don't reject values just because they exceed recommended/UI limits or may give poor results; adapt (clamp/pad/resize) only when the operation would otherwise fail. Security checks (path containment) still apply.
 
 ## V1 Input Format (Legacy Reference)
 

@@ -1,6 +1,6 @@
 ---
 name: comfyui-node-advanced
-description: ComfyUI advanced node patterns - MatchType, Autogrow, DynamicCombo, node expansion, MultiType, wildcard inputs. Use when building complex nodes with dynamic inputs, type matching, or node expansion.
+description: ComfyUI advanced node patterns - MatchType, Autogrow, DynamicCombo, node expansion, MultiType, wildcard inputs, loops. Use when building complex nodes with dynamic inputs, type matching, or node expansion.
 ---
 
 # ComfyUI Advanced Node Patterns (V3)
@@ -38,7 +38,11 @@ When the user connects an IMAGE to the input, the output automatically becomes I
 
 ### Switch Node Pattern
 
+Core Switch (since v0.35) makes both branches optional so either may be left disconnected. A disconnected optional input is **absent** from kwargs; a connected-but-unevaluated lazy input is `None`. Use a sentinel to tell them apart:
+
 ```python
+MISSING = object()
+
 class Switch(io.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -49,8 +53,8 @@ class Switch(io.ComfyNode):
             category="logic",
             inputs=[
                 io.Boolean.Input("switch"),
-                io.MatchType.Input("on_false", template=template, lazy=True),
-                io.MatchType.Input("on_true", template=template, lazy=True),
+                io.MatchType.Input("on_false", template=template, lazy=True, optional=True),
+                io.MatchType.Input("on_true", template=template, lazy=True, optional=True),
             ],
             outputs=[
                 io.MatchType.Output(template=template, display_name="output"),
@@ -58,15 +62,16 @@ class Switch(io.ComfyNode):
         )
 
     @classmethod
-    def check_lazy_status(cls, switch, on_false=None, on_true=None):
-        if switch and on_true is None:
+    def check_lazy_status(cls, switch, on_false=MISSING, on_true=MISSING):
+        if switch and on_true is None:      # connected, not yet evaluated
             return ["on_true"]
         if not switch and on_false is None:
             return ["on_false"]
 
     @classmethod
-    def execute(cls, switch, on_true, on_false):
-        return io.NodeOutput(on_true if switch else on_false)
+    def execute(cls, switch, on_true=MISSING, on_false=MISSING):
+        selected = on_true if switch else on_false
+        return io.NodeOutput(None if selected is MISSING else selected)
 ```
 
 ## MultiType - Accept Multiple Types
@@ -202,6 +207,28 @@ io.DynamicSlot.Input(
 ```
 
 > Note: `DynamicSlot` is registered infrastructure in `comfy_api.latest` but is not yet used by any core node; treat it as experimental.
+
+> `_DynamicGroup` (`COMFY_DYNAMICGROUP_V3`, a repeated row of widgets, used by core LoRA stack nodes) is **internal and unstable**: it is not exported from `io`; do not import it from `comfy_api.latest._io`. Frontend support arrived in frontend v1.57.0.
+
+## Lazy Inputs Inside Dynamic Inputs
+
+Sub-inputs of `Autogrow` / `DynamicCombo` can be `lazy=True` (scheduling fixed in v0.40). In `check_lazy_status` **only**, every nested value arrives as a `(value, original_key)` tuple; return the `original_key` to request it. `execute` receives plain values.
+
+```python
+io.Autogrow.Input("rows", template=io.Autogrow.TemplatePrefix(
+    io.Image.Input("img", lazy=True), prefix="item", min=1))
+
+@classmethod
+def check_lazy_status(cls, rows):
+    value, key = rows["item0"]          # key == "rows.item0"
+    return [key] if value is None else []
+```
+
+## Loops (core StartLoop / EndLoop)
+
+Since v0.36 core ships `StartLoop` / `EndLoop` (`utilities/looping`; simple / For / List modes, carried value, accumulate). Prefer them over custom loop nodes. Things that affect authors:
+- The loop body is **cloned per iteration via node expansion**, so nodes inside a loop run once per iteration and `cls.hidden.unique_id` is an expanded id (display id maps back to the original node).
+- `io.Schema(loop_boundary="start" | "end")` marks loop boundaries for prompt validation (pairing, no escaping body, `accumulate` not fed from the body). It is tied to the core loop implementation; treat as experimental.
 
 ## Node Expansion - Subgraph Injection
 

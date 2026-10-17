@@ -86,13 +86,14 @@ io.Schema(
     is_dev_only=False,                  # hidden unless dev mode enabled
     is_api_node=False,                  # marks as API-only node
     is_input_list=False,                # receive full lists instead of individual items
-    not_idempotent=False,               # prevents caching
+    not_idempotent=False,               # no cache sharing between identical instances (see lifecycle)
     accept_all_inputs=False,            # accept arbitrary inputs via **kwargs
     enable_expand=False,                # allow node expansion (subgraphs)
     search_aliases=["alias1", "alias2"],# alternative search terms
     essentials_category="Basic",        # optional: Essentials tab category
     price_badge=None,                   # optional: PriceBadge for API nodes
     has_intermediate_output=False,      # True for nodes with interactive UI that produce intermediate outputs
+    loop_boundary=None,                 # "start"/"end": core loop validation (v0.36+, experimental)
 )
 ```
 

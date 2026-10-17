@@ -8,6 +8,7 @@ Covers: comfyui-node-outputs
 - AudioSaveHelper (save_audio, get_save_audio_ui)
 - Manual image saving (SavedResult, SavedImages)
 - FolderType (output, temp, input)
+- Saved3DModels ("3d" output item)
 """
 
 import os
@@ -342,3 +343,30 @@ class SkillTest_NoOutput(io.ComfyNode):
     @classmethod
     def execute(cls, text):
         return io.NodeOutput()
+
+
+# --- outputs: Saved3DModels (standard "3d" output item) ---
+class SkillTest_Saved3DModels(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="SkillTest_Saved3DModels",
+            display_name="[Test] Saved 3D Models",
+            category="skill_tests/outputs",
+            is_output_node=True,
+            inputs=[io.Float.Input("size", default=1.0, min=0.1, max=10.0)],
+            outputs=[],
+        )
+
+    @classmethod
+    def execute(cls, size):
+        import uuid
+        s = size
+        obj = (f"v 0 0 0\nv {s} 0 0\nv 0 {s} 0\nv 0 0 {s}\n"
+               "f 1 3 2\nf 1 2 4\nf 1 4 3\nf 2 3 4\n")
+        filename = f"skilltest_tetra_{uuid.uuid4().hex[:8]}.obj"
+        with open(os.path.join(folder_paths.get_temp_directory(), filename), "w") as f:
+            f.write(obj)
+        return io.NodeOutput(ui=ui.Saved3DModels(
+            [ui.SavedResult(filename, "", io.FolderType.temp)],
+        ))

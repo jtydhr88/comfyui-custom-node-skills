@@ -29,6 +29,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | TIMESTEPS_RANGE | `io.TimestepsRange` | `tuple[int, int]` | Range 0.0-1.0 |
 | DICT | `io.Dict` | `dict` | Generic dictionary |
 | ARRAY | `io.Array` | `list` | Generic list/array |
+| LAYERS | `io.Layers` | `{"version": int, "canvas"?: (w, h), "layers": list[LayerItem]}` | Layer stack (v0.31+); LayerItem: `image` tensor, `type: "raster"`, `z_index`, optional `x`, `y`, `mask`, `name`, `opacity`, `blend_mode` (`io.Layers.BlendMode`), `visible`, `flip_h/v`, `rotation`, `w`, `h` |
 
 ### Model Types (opaque, typically pass-through)
 
@@ -86,7 +87,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 
 **Load3D.Model3DDict**: `{"image": str, "mask": str, "normal": str, "camera_info": CameraInfo, "recording"?: str, "model_3d_info"?: list[Model3DTransform]}`
 
-**Load3DCamera.CameraInfo** (right-handed, Y-up, camera looks down -Z): required keys `position`, `target`, `zoom`, `cameraType` (`'perspective' | 'orthographic'`); optional keys `quaternion` (camera world rotation), `fov` (vertical, degrees, perspective only), `aspect`, `near`, `far`, `frustum` (orthographic only: `{left, right, top, bottom}`).
+**Load3DCamera.CameraInfo** (right-handed, Y-up, camera looks down -Z): required keys `position`, `target`, `zoom`, `cameraType` (`'perspective' | 'orthographic'`); optional keys `quaternion` (camera world rotation), `useCustomUp` (bool, v0.40+: use the quaternion's up instead of world +Y), `fov` (vertical, degrees, perspective only), `aspect`, `near`, `far`, `frustum` (orthographic only: `{left, right, top, bottom}`).
 
 **Load3DModelInfo.Model3DTransform**: `{"position": dict, "quaternion": dict, "scale": dict}` in world space.
 
@@ -109,6 +110,10 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | IMAGECOMPARE | `io.ImageCompare` | `dict` | Image comparison widget |
 | WEBCAM | `io.Webcam` | `str` | Webcam capture widget |
 | HISTOGRAM | `io.Histogram` | `list[int]` | Histogram bin counts |
+| VIDEO_EDIT | `io.VideoEdit` | `{"trim"?: {start_time, duration}, "crop"?: {x, y, width, height}}` | Video trim/crop editor (`features=["trim","crop"]`) |
+| RESOLUTION_PREVIEW | `io.ResolutionPreview` | `dict` | Live resolution preview bound to other widgets by name |
+| COMPOSITOR | `io.Compositor` | `dict` (LayerState) | Layer-editor state, default `{}` |
+| CAMERA_INFO_STATE | `io.CameraInfoState` | `dict` | Camera editor state (input only) |
 
 ### Special Types
 
@@ -120,6 +125,7 @@ ComfyUI uses specific data types for node inputs and outputs. Understanding tens
 | COMFY_AUTOGROW_V3 | `io.Autogrow` | Dynamic growing inputs |
 | COMFY_DYNAMICCOMBO_V3 | `io.DynamicCombo` | Combo that reveals sub-inputs per option |
 | COMFY_DYNAMICSLOT_V3 | `io.DynamicSlot` | Connection slot that reveals sub-inputs when connected (not yet used by core nodes) |
+| COMFY_DYNAMICGROUP_V3 | *(internal `_DynamicGroup`)* | Repeated widget rows; not exported, unstable — do not use (frontend support since v1.57.0) |
 | FLOW_CONTROL | `io.FlowControl` | Internal testing only |
 | ACCUMULATION | `io.Accumulation` | Internal testing only |
 
@@ -256,20 +262,29 @@ Combine conditioning: `result = cond_a + cond_b` (list concatenation).
 ```python
 class VideoInput(ABC):
     def get_components(self) -> VideoComponents    # images tensor + audio + frame_rate
-    def save_to(self, path, format, codec, metadata, bit_depth=None)  # bit_depth: None keeps native depth (8 or 10)
+    def save_to(self, path, format=VideoContainer.AUTO, codec=VideoCodec.AUTO, metadata=None,
+                bit_depth=None,     # None keeps native depth
+                crf=None,           # H.264/AV1 CRF; None -> 18 (H.264) / 24 (AV1)
+                color_space=None,   # "sRGB" | "HDR" (BT.2020 HLG) | "HDR PQ"
+                preset=None)        # H.264 encoder preset, e.g. "ultrafast"
     def as_trimmed(self, start_time=None, duration=None, strict_duration=False) -> VideoInput | None
+    def as_cropped(self, x=0, y=0, width=0, height=0) -> VideoInput  # clamped, even-aligned; empty/full rect = self
     def get_stream_source(self) -> str | BytesIO
     def get_dimensions(self) -> tuple[int, int]     # (width, height)
     def get_duration(self) -> float                  # seconds
     def get_frame_count(self) -> int
     def get_frame_rate(self) -> Fraction
     def get_container_format(self) -> str
-    def get_bit_depth(self) -> int                   # 8 or 10 (default implementation returns 8)
+    def get_bit_depth(self) -> int                   # max component bits of the stream, e.g. 8/10/12 (default 8)
+    def get_color_space(self) -> str                 # "sRGB" | "HDR" | "HDR PQ" | "auto" (unknown)
 ```
 
-10-bit video is supported end-to-end: loaders report `get_bit_depth()`, and save nodes preserve depth (`yuv420p10le` for 10-bit h264).
+High bit depth and HDR (v0.34+) are supported end-to-end: loaders report `get_bit_depth()` / `get_color_space()`, save nodes preserve them. Codecs: `Types.VideoCodec.AUTO/H264/AV1`; containers: `Types.VideoContainer.AUTO/MP4/MKV/WEBM`.
 
-Concrete implementations: `VideoFromFile`, `VideoFromComponents` (available via `from comfy_api.latest import InputImpl`).
+Concrete implementations (via `from comfy_api.latest import InputImpl`):
+- `VideoFromFile(file, *, start_time=0, duration=0, crop=None)` — path or BytesIO; `crop=(x, y, w, h)`
+- `VideoFromComponents(components, bit_depth=8, color_space="sRGB")` — from tensors
+- `VideoFromList(videos, complete_audio=None, codec=AUTO)` — concatenation (v0.36+)
 
 ## 3D Types
 
@@ -292,10 +307,12 @@ file_3d.save_to("/output/model.glb")
 ```python
 from comfy_api.latest import Types
 
-mesh = Types.MESH(vertices=torch.tensor(...), faces=torch.tensor(...))
-voxel = Types.VOXEL(data=torch.tensor(...))
+mesh = Types.MESH(vertices=torch.tensor(...), faces=torch.tensor(...))  # (B,N,3), (B,M,3)
+voxel = Types.VOXEL(data=torch.tensor(...), voxel_colors=None, resolution=None)
 splat = Types.SPLAT(...)   # gaussian splat data
 ```
+
+MESH optional fields (pass by **keyword** — `metallic_roughness` was inserted before `vertex_counts` in v0.34, breaking positional calls): `uvs` (B,N,2), `vertex_colors` (B,N,3|4), `texture` (B,H,W,3 baseColor), `metallic_roughness` (B,H,W,3; G=roughness, B=metallic), `vertex_counts`/`face_counts` (B,) real lengths for padded batches (both or neither), `unlit`, `normals` (B,N,3), `tangents` (B,N,4), `normal_map`, `occlusion_in_mr`, `material` (dict), `emissive`.
 
 ## Widget Types with Special Features
 
@@ -413,6 +430,8 @@ class MyData(ComfyTypeIO):
     Type = dict[str, Any]  # type hint for the data
 ```
 
+**RAM cache sizing**: the default RAM-pressure cache measures CPU tensors in outputs (also inside lists/tuples/dicts); opaque objects count as a small default. For a custom class holding large tensors, add `def _comfy_cache_tensors(self): return (self.a, self.b)` (as core MESH/VOXEL/SPLAT do, v0.35+) so it is sized and evicted correctly.
+
 ## AnyType / Wildcard
 
 ```python
@@ -438,7 +457,7 @@ from comfy_api.latest import (
     io,              # all io types (io.Image, io.Schema, io.ComfyNode, etc.)
     ui,              # UI output helpers (ui.PreviewImage, ui.SavedImages, etc.)
     Input,           # Input.Image (ImageInput), Input.Audio, Input.Mask, Input.Latent, Input.Video
-    InputImpl,       # InputImpl.VideoFromFile, InputImpl.VideoFromComponents
+    InputImpl,       # InputImpl.VideoFromFile, .VideoFromComponents, .VideoFromList
     Types,           # Types.MESH, Types.VOXEL, Types.File3D, Types.VideoCodec, etc.
 )
 ```
